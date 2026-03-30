@@ -1,0 +1,26 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id          String   @id @default(uuid())
+  phoneNumber String   @unique
+  name        String?
+  createdAt   DateTime @default(now())
+  records     ChantRecord[]
+}
+
+model ChantRecord {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  count     Int      // Number of taps in this batch
+  timestamp DateTime @default(now())
+  date      String   // YYYY-MM-DD for simpler daily aggregation
+  
+  @@index([userId, date])
+}
