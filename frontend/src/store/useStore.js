@@ -18,6 +18,15 @@ export const useStore = create(
       currentNaam: { name: 'Krishna', subtitle: 'The Supreme Personality' },
       setNaam: (naam) => set({ currentNaam: naam }),
 
+      // Reminder Settings
+      isReminderEnabled: false,
+      reminderTime: "08:00", // "HH:mm" format 24-hour style
+      setReminderSettings: (enabled, time) => set({ isReminderEnabled: enabled, reminderTime: time }),
+
+      // Daily Goal
+      dailyGoal: 108,
+      setDailyGoal: (goal) => set({ dailyGoal: goal }),
+
       // Authentication
       login: (token, phone) => set({ userToken: token, phoneNumber: phone }),
       logout: () => set({ userToken: null, phoneNumber: null, totalCount: 0, todayCount: 0, unsyncedTaps: 0, sessionCount: 0, historyRecords: [] }),

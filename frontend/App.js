@@ -5,12 +5,13 @@ import AuthScreen from './src/screens/AuthScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
 import CounterScreen from './src/screens/CounterScreen';
 import ProgressScreen from './src/screens/ProgressScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
 
 function BottomTabBar({ activeTab, onTabSelect }) {
   return (
     <View style={styles.tabContainer}>
       <TouchableOpacity style={styles.tabItem} onPress={() => onTabSelect('home')}>
-        <Text style={[styles.tabIcon, activeTab === 'home' && styles.tabIconActive]}>⚙️</Text>
+        <Text style={[styles.tabIcon, activeTab === 'home' && styles.tabIconActive]}>🏠</Text>
       </TouchableOpacity>
       
       <TouchableOpacity style={styles.tabItem} onPress={() => onTabSelect('chart')}>
@@ -19,6 +20,10 @@ function BottomTabBar({ activeTab, onTabSelect }) {
       
       <TouchableOpacity style={styles.tabItem} onPress={() => onTabSelect('book')}>
         <Text style={[styles.tabIcon, activeTab === 'book' && styles.tabIconActive]}>📖</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.tabItem} onPress={() => onTabSelect('settings')}>
+        <Text style={[styles.tabIcon, activeTab === 'settings' && styles.tabIconActive]}>⚙️</Text>
       </TouchableOpacity>
     </View>
   );
@@ -64,6 +69,7 @@ export default function App() {
            <Text style={{color: '#FF6B35', fontSize: 20}}>Audio Stories Coming Soon!</Text>
          </SafeAreaView>
       )}
+      {activeTab === 'settings' && <SettingsScreen />}
 
       <BottomTabBar activeTab={activeTab} onTabSelect={setActiveTab} />
     </View>

@@ -4,7 +4,7 @@ import NetInfo from '@react-native-community/netinfo';
 // Set your computer's local IP Address below if testing on physical device on the same Wifi
 // Use 'http://10.0.2.2:3030' for standard Android Emulator
 // Set your computer's local IP Address below if testing on physical device on the same Wifi
-const API_URL = 'http://192.168.1.7:3030'; 
+const API_URL = 'http://192.168.1.6:3030'; 
 
 export const apiCall = async (endpoint, method = 'GET', body = null) => {
   const { userToken } = useStore.getState();

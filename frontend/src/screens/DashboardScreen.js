@@ -185,7 +185,7 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
               <View style={styles.verticalDivider} />
               
               <View style={styles.statColumn}>
-                <Text style={styles.statNumber}>{totalCount}</Text>
+                <Text style={styles.statNumber}>{todayCount}</Text>
                 <Text style={styles.statLabel}>Total Jaap Count</Text>
               </View>
             </View>
