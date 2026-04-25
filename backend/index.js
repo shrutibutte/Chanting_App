@@ -14,6 +14,30 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'spiritual_secret_108';
 
+const admin = require('firebase-admin');
+
+// Ensure you place your downloaded Firebase JSON file as 'serviceAccountKey.json' in this backend folder
+try {
+  const fs = require('fs');
+  const path = require('path');
+  const serviceAccountPath = path.join(__dirname, 'serviceAccountKey.json');
+  
+  if (fs.existsSync(serviceAccountPath)) {
+    const serviceAccount = require(serviceAccountPath);
+    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+    console.log('[FIREBASE] Admin initialized with serviceAccountKey.json');
+  } else if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+    console.log('[FIREBASE] Admin initialized with FIREBASE_SERVICE_ACCOUNT ENV');
+  } else {
+    // Falls back to Google Application Default Credentials
+    admin.initializeApp();
+  }
+} catch (error) {
+  console.log('[FIREBASE] Admin init warning:', error.message);
+}
+
 app.use(cors());
 app.use(express.json());
 
@@ -35,35 +59,21 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
-// --- Mock OTP Service ---
-// In production, integrate with MSG91, Twilio, or Firebase.
-const otps = new Map(); // Global memory (or Redis) for storing temporary OTPs
-
-app.post('/auth/send-otp', async (req, res) => {
-  const { phoneNumber } = req.body;
-  if (!phoneNumber) return res.status(400).json({ error: 'Mobile number required' });
-
-  const otp = '123456'; // FIXED for testing, or use Math.random()
-  otps.set(phoneNumber, otp);
-  
-  console.log(`[AUTH] OTP for ${phoneNumber}: ${otp}`);
-  res.json({ success: true, message: 'OTP sent (Check server logs)' });
-});
-
+// --- OTP Auth Routes ---
 app.post('/auth/verify-otp', async (req, res) => {
-  const { phoneNumber, otp } = req.body;
-  if (!phoneNumber || !otp) return res.status(400).json({ error: 'Number and OTP required' });
-
-  const storedOtp = otps.get(phoneNumber);
-  if (storedOtp !== otp) {
-    return res.status(400).json({ error: 'Invalid OTP' });
-  }
-
-  // Cleanup OTP
-  otps.delete(phoneNumber);
+  const { firebaseToken } = req.body;
+  if (!firebaseToken) return res.status(400).json({ error: 'Firebase Token required' });
 
   try {
-    // Get or Create User
+    // Decrypt token from Google
+    const decodedToken = await admin.auth().verifyIdToken(firebaseToken);
+    const phoneNumber = decodedToken.phone_number;
+
+    if (!phoneNumber) {
+      return res.status(400).json({ error: 'No phone number attached to this verified token.' });
+    }
+
+    // Upsert User in PostgreSQL
     let user = await prisma.user.findUnique({ where: { phoneNumber } });
     if (!user) {
       user = await prisma.user.create({ data: { phoneNumber } });
@@ -72,8 +82,8 @@ app.post('/auth/verify-otp', async (req, res) => {
     const token = jwt.sign({ id: user.id, phoneNumber: user.phoneNumber }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ token, user });
   } catch (error) {
-    console.error('[Verify OTP Error]:', error.message);
-    res.status(500).json({ error: 'Database error linking your account', details: error.message });
+    console.error('[Firebase Verify Error]:', error.message);
+    res.status(401).json({ error: 'Invalid or expired Firebase token', details: error.message });
   }
 });
 

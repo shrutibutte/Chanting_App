@@ -2,7 +2,10 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useStore } from '../store/useStore';
-import { syncOfflineCounter } from '../api/client';
+import { 
+  
+  
+ } from '../api/client';
 
 export default function CounterScreen({ onExit }) {
   const { sessionCount, incrementTap, resetSession } = useStore();

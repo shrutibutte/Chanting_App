@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "348563987254",
+    "project_id": "chantingapp-330be",
+    "storage_bucket": "chantingapp-330be.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:348563987254:android:d205073d1b619b886d3197",
+        "android_client_info": {
+          "package_name": "com.butte.frontend"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBVD-racAhtwmPF8WtHf369AYKQUjqRAd4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

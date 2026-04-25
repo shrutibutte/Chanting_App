@@ -15,6 +15,14 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    ```bash
    npx expo start
    npx expo start -c
+   npx expo start --dev-client -c
+
+   when apk file downlaod and install in mobile then for connetion use 
+
+   ifconfig ---> command 
+   use ipv4:8081
+   
+
 
    ```
 

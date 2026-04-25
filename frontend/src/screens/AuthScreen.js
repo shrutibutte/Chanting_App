@@ -1,24 +1,40 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { useStore } from '../store/useStore';
 import { apiCall } from '../api/client';
+import auth from '@react-native-firebase/auth';
 
 export default function AuthScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otp, setOtp] = useState('');
-  const [isOtpSent, setIsOtpSent] = useState(false);
+  const [confirmResult, setConfirmResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
   const setLogin = useStore((state) => state.login);
+
+  useEffect(() => {
+    let interval;
+    if (resendTimer > 0) {
+      interval = setInterval(() => setResendTimer(val => val - 1), 1000);
+    }
+    return () => clearInterval(interval);
+  }, [resendTimer]);
 
   const handleSendOtp = async () => {
     if (phoneNumber.length < 10) return Alert.alert('Invalid Number', 'Please enter a valid mobile number.');
+    
+    // Auto-prepend generic country code if missing
+    const formattedPhone = phoneNumber.startsWith('+') ? phoneNumber : `+91${phoneNumber}`;
+    
     setLoading(true);
     try {
-      await apiCall('/auth/send-otp', 'POST', { phoneNumber });
-      setIsOtpSent(true);
-      Alert.alert('OTP Sent', 'For testing, use 123456');
+      const confirmation = await auth().signInWithPhoneNumber(formattedPhone);
+      setConfirmResult(confirmation);
+      setResendTimer(30);
+      Alert.alert('OTP Sent', `A secret code was sent to ${formattedPhone}`);
     } catch (error) {
-      Alert.alert('Error', error.message);
+      console.error(error);
+      Alert.alert('Error Sending OTP', error.message);
     } finally {
       setLoading(false);
     }
@@ -28,10 +44,19 @@ export default function AuthScreen() {
     if (otp.length < 6) return Alert.alert('Invalid OTP', 'Please enter the 6-digit OTP.');
     setLoading(true);
     try {
-      const data = await apiCall('/auth/verify-otp', 'POST', { phoneNumber, otp });
+      // 1. Confirm the OTP locally with Firebase
+      await confirmResult.confirm(otp);
+      
+      // 2. Fetch the newly granted secure JWT from Firebase
+      const idToken = await auth().currentUser.getIdToken(true);
+      
+      // 3. Send token to Node.js boundary to spawn your Postgres JWT
+      const data = await apiCall('/auth/verify-otp', 'POST', { firebaseToken: idToken });
+      
       setLogin(data.token, data.user.phoneNumber);
     } catch (error) {
-      Alert.alert('Error', error.message);
+      console.error(error);
+      Alert.alert('Invalid Code', 'The OTP code entered is incorrect or has expired.');
     } finally {
       setLoading(false);
     }
@@ -50,10 +75,10 @@ export default function AuthScreen() {
         keyboardType="phone-pad"
         value={phoneNumber}
         onChangeText={setPhoneNumber}
-        editable={!isOtpSent}
+        editable={!confirmResult} // locked during verify phase
       />
 
-      {isOtpSent && (
+      {confirmResult && (
         <>
           <Text style={styles.label}>OTP</Text>
           <TextInput
@@ -70,15 +95,27 @@ export default function AuthScreen() {
 
       <TouchableOpacity 
         style={styles.button} 
-        onPress={isOtpSent ? handleVerifyOtp : handleSendOtp}
+        onPress={confirmResult ? handleVerifyOtp : handleSendOtp}
         disabled={loading}
       >
         {loading ? (
-          <ActivityIndicator color="#000" />
+          <ActivityIndicator color="#FFFFFF" />
         ) : (
-          <Text style={styles.buttonText}>{isOtpSent ? "Verify & Login" : "Send OTP"}</Text>
+          <Text style={styles.buttonText}>{confirmResult ? "Verify & Login" : "Send OTP"}</Text>
         )}
       </TouchableOpacity>
+
+      {confirmResult && (
+        <TouchableOpacity 
+          style={[styles.resendButton, resendTimer > 0 && { opacity: 0.5 }]} 
+          onPress={resendTimer === 0 ? handleSendOtp : null}
+          disabled={resendTimer > 0 || loading}
+        >
+          <Text style={styles.resendText}>
+            {resendTimer > 0 ? `Resend OTP in ${resendTimer}s` : "Resend OTP"}
+          </Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -141,5 +178,14 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  resendButton: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  resendText: {
+    color: '#FF6B35',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
