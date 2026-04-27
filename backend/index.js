@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
+const nodemailer = require('nodemailer');
 require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
 const { PrismaPg } = require('@prisma/adapter-pg');
@@ -35,41 +36,63 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
-// --- Mock OTP Service ---
-// In production, integrate with MSG91, Twilio, or Firebase.
+// --- Email OTP Service ---
 const otps = new Map(); // Global memory (or Redis) for storing temporary OTPs
 
-app.post('/auth/send-otp', async (req, res) => {
-  const { phoneNumber } = req.body;
-  if (!phoneNumber) return res.status(400).json({ error: 'Mobile number required' });
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
+});
 
-  const otp = '123456'; // FIXED for testing, or use Math.random()
-  otps.set(phoneNumber, otp);
+app.post('/auth/send-otp', async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email address required' });
+
+  // Generate 6-digit OTP
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  otps.set(email, otp);
   
-  console.log(`[AUTH] OTP for ${phoneNumber}: ${otp}`);
-  res.json({ success: true, message: 'OTP sent (Check server logs)' });
+  console.log(`[AUTH] Generating OTP for ${email}`);
+  
+  try {
+    await transporter.sendMail({
+      from: `"Naam Jaap App" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: 'Your Login Code - Naam Jaap',
+      html: `<h2>Welcome to Naam Jaap</h2>
+             <p>Your 6-digit login code is: <strong>${otp}</strong></p>
+             <p>This code will expire in 10 minutes.</p>`
+    });
+    res.json({ success: true, message: 'OTP sent to your email' });
+  } catch (error) {
+    console.error('[Email Send Error]:', error);
+    res.status(500).json({ error: 'Failed to send OTP email', details: error.message });
+  }
 });
 
 app.post('/auth/verify-otp', async (req, res) => {
-  const { phoneNumber, otp } = req.body;
-  if (!phoneNumber || !otp) return res.status(400).json({ error: 'Number and OTP required' });
+  const { email, otp } = req.body;
+  if (!email || !otp) return res.status(400).json({ error: 'Email and OTP required' });
 
-  const storedOtp = otps.get(phoneNumber);
+  const storedOtp = otps.get(email);
   if (storedOtp !== otp) {
     return res.status(400).json({ error: 'Invalid OTP' });
   }
 
   // Cleanup OTP
-  otps.delete(phoneNumber);
+  otps.delete(email);
 
   try {
     // Get or Create User
-    let user = await prisma.user.findUnique({ where: { phoneNumber } });
+    let user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
-      user = await prisma.user.create({ data: { phoneNumber } });
+      user = await prisma.user.create({ data: { email } });
     }
 
-    const token = jwt.sign({ id: user.id, phoneNumber: user.phoneNumber }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ token, user });
   } catch (error) {
     console.error('[Verify OTP Error]:', error.message);

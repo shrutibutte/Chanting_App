@@ -49,7 +49,9 @@ export default function CounterScreen({ onExit }) {
           <Text style={styles.countText}>{sessionCount}</Text>
           <Text style={styles.subtitle}>Tap anywhere to Jaap</Text>
         </View>
-
+        <View >
+          <Text style={styles.exitText}>Today's</Text>
+        </View>
         <View style={styles.bottomBar}>
           <Text style={styles.totalMalasText}>Malas Completed: {malasCompleted}</Text>
         </View>

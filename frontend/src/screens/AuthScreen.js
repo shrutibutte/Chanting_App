@@ -4,19 +4,19 @@ import { useStore } from '../store/useStore';
 import { apiCall } from '../api/client';
 
 export default function AuthScreen() {
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [isOtpSent, setIsOtpSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const setLogin = useStore((state) => state.login);
 
   const handleSendOtp = async () => {
-    if (phoneNumber.length < 10) return Alert.alert('Invalid Number', 'Please enter a valid mobile number.');
+    if (!email.includes('@')) return Alert.alert('Invalid Email', 'Please enter a valid email address.');
     setLoading(true);
     try {
-      await apiCall('/auth/send-otp', 'POST', { phoneNumber });
+      await apiCall('/auth/send-otp', 'POST', { email });
       setIsOtpSent(true);
-      Alert.alert('OTP Sent', 'For testing, use 123456');
+      Alert.alert('OTP Sent', 'Please check your email for the OTP.');
     } catch (error) {
       Alert.alert('Error', error.message);
     } finally {
@@ -28,8 +28,8 @@ export default function AuthScreen() {
     if (otp.length < 6) return Alert.alert('Invalid OTP', 'Please enter the 6-digit OTP.');
     setLoading(true);
     try {
-      const data = await apiCall('/auth/verify-otp', 'POST', { phoneNumber, otp });
-      setLogin(data.token, data.user.phoneNumber);
+      const data = await apiCall('/auth/verify-otp', 'POST', { email, otp });
+      setLogin(data.token, data.user.email);
     } catch (error) {
       Alert.alert('Error', error.message);
     } finally {
@@ -42,14 +42,15 @@ export default function AuthScreen() {
       <Text style={styles.title}>Naam Jaap</Text>
       <Text style={styles.subtitle}>Begin your spiritual journey</Text>
 
-      <Text style={styles.label}>Mobile Number</Text>
+      <Text style={styles.label}>Email Address</Text>
       <TextInput
         style={styles.input}
-        placeholder="Enter your mobile number"
+        placeholder="Enter your email address"
         placeholderTextColor="#666"
-        keyboardType="phone-pad"
-        value={phoneNumber}
-        onChangeText={setPhoneNumber}
+        keyboardType="email-address"
+        autoCapitalize="none"
+        value={email}
+        onChangeText={setEmail}
         editable={!isOtpSent}
       />
 

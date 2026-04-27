@@ -6,7 +6,7 @@ export const useStore = create(
   persist(
     (set, get) => ({
       userToken: null,
-      phoneNumber: null,
+      email: null,
       totalCount: 0,       // Total all-time taps (synced + unsynced)
       todayCount: 0,       // Today's total taps
       unsyncedTaps: 0,     // Taps waiting to be sent to backend
@@ -28,8 +28,8 @@ export const useStore = create(
       setDailyGoal: (goal) => set({ dailyGoal: goal }),
 
       // Authentication
-      login: (token, phone) => set({ userToken: token, phoneNumber: phone }),
-      logout: () => set({ userToken: null, phoneNumber: null, totalCount: 0, todayCount: 0, unsyncedTaps: 0, sessionCount: 0, historyRecords: [] }),
+      login: (token, emailAddr) => set({ userToken: token, email: emailAddr }),
+      logout: () => set({ userToken: null, email: null, totalCount: 0, todayCount: 0, unsyncedTaps: 0, sessionCount: 0, historyRecords: [] }),
 
       // Session logic
       resetSession: () => set({ sessionCount: 0 }),
