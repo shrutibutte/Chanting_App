@@ -1,21 +1,17 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
+import Svg, { Circle } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { useStore } from '../store/useStore';
 import { syncOfflineCounter } from '../api/client';
 
 export default function CounterScreen({ onExit }) {
-  const { sessionCount, incrementTap, resetSession, todayCount, totalCount } = useStore();
-
-  useEffect(() => {
-    // Reset session whenever the screen is opened
-    resetSession();
-  }, []);
+  const { incrementTap, todayCount, totalCount } = useStore();
 
   const handleTap = () => {
     // Vibration feedback
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
+
     // Increment local state instantly for zero-latency UI
     incrementTap();
   };
@@ -26,13 +22,20 @@ export default function CounterScreen({ onExit }) {
     onExit();
   };
 
-  const currentMalaProgress = sessionCount % 108;
+  const currentMalaProgress = todayCount % 108;
   const todayMalasCompleted = Math.floor(todayCount / 108);
 
+  const percentage = Math.floor((currentMalaProgress / 108) * 100);
+  const size = 280;
+  const strokeWidth = 20;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (percentage / 100) * circumference;
+
   return (
-    <TouchableOpacity 
-      style={styles.container} 
-      activeOpacity={0.9} 
+    <TouchableOpacity
+      style={styles.container}
+      activeOpacity={0.9}
       onPress={handleTap}
     >
       <SafeAreaView style={styles.safeArea}>
@@ -46,9 +49,28 @@ export default function CounterScreen({ onExit }) {
         </View>
 
         <View style={styles.centerBox}>
-          <Text style={styles.countText}>{sessionCount}</Text>
+          <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center', marginBottom: 20 }}>
+            <Svg width={size} height={size} style={{ position: 'absolute' }}>
+              <Circle stroke="#FFE6D3" fill="none" cx={size / 2} cy={size / 2} r={radius} strokeWidth={strokeWidth} />
+              <Circle 
+                stroke="#FF6B35" 
+                fill="none" 
+                cx={size / 2} cy={size / 2} r={radius} strokeWidth={strokeWidth} 
+                strokeDasharray={`${circumference} ${circumference}`} 
+                strokeDashoffset={strokeDashoffset} 
+                strokeLinecap="round" 
+                transform={`rotate(-90, ${size / 2}, ${size / 2})`} 
+              />
+            </Svg>
+
+            <View style={styles.circleInner}>
+              <Text style={styles.countText}>{currentMalaProgress} / 108</Text>
+            </View>
+          </View>
+          
           <Text style={styles.subtitle}>Tap anywhere to Jaap</Text>
         </View>
+
         <View style={styles.statsContainer}>
           <Text style={styles.statsTitle}>Today's</Text>
           <Text style={styles.statsDetails}>
@@ -67,6 +89,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF8F0',
 
   },
+  circleInner: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   safeArea: {
     flex: 1,
     justifyContent: 'center',
@@ -82,7 +108,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   exitButton: {
-    paddingInline:10,
+    paddingInline: 10,
     // paddingBlock:5,
     backgroundColor: '#FFF8F0',
     borderRadius: 8,
@@ -98,15 +124,20 @@ const styles = StyleSheet.create({
   malaText: {
     color: '#FF6B35',
     fontSize: 18,
-    fontWeight:"bold",
+    fontWeight: "bold",
   },
   centerBox: {
     alignItems: 'center',
   },
   countText: {
     color: '#FF6B35',
-    fontSize: 140,
+    fontSize: 48,
     fontWeight: 'bold',
+  },
+  ofText: {
+    color: '#8E8E8E',
+    fontSize: 18,
+    marginBottom: 4,
   },
   subtitle: {
     color: '#666',

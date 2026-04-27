@@ -39,30 +39,42 @@ export const apiCall = async (endpoint, method = 'GET', body = null) => {
   }
 };
 
+let syncPromise = null;
+
 // Batch Sync Logic
 export const syncOfflineCounter = async () => {
-  const state = useStore.getState();
-  const tapsToSync = state.unsyncedTaps;
+  if (syncPromise) return syncPromise;
+  
+  syncPromise = (async () => {
+    const state = useStore.getState();
+    const tapsToSync = state.unsyncedTaps;
 
-  // Don't sync if internet is out or nothing to sync
-  const netInfo = await NetInfo.fetch();
-  if (!netInfo.isConnected || tapsToSync <= 0) return;
+    // Don't sync if internet is out or nothing to sync
+    const netInfo = await NetInfo.fetch();
+    if (!netInfo.isConnected || tapsToSync <= 0) {
+      syncPromise = null;
+      return;
+    }
 
-  // Optimistically clear the taps so concurrent calls don't double count
-  state.clearUnsynced(tapsToSync);
+    // Optimistically clear the taps so concurrent calls don't double count
+    state.clearUnsynced(tapsToSync);
 
-  try {
-    console.log(`Syncing ${tapsToSync} taps to backend...`);
-    await apiCall('/sync-taps', 'POST', { 
-      count: tapsToSync, 
-      date: new Date().toISOString().split('T')[0] 
-    });
-    console.log(`Sync successful!`);
-  } catch (error) {
-    console.log("Sync failed, will retry later.");
-    // Put them back if the request failed
-    useStore.setState((s) => ({
-      unsyncedTaps: s.unsyncedTaps + tapsToSync
-    }));
-  }
+    try {
+      console.log(`Syncing ${tapsToSync} taps to backend...`);
+      await apiCall('/sync-taps', 'POST', { 
+        count: tapsToSync, 
+        date: new Date().toISOString().split('T')[0] 
+      });
+      console.log(`Sync successful!`);
+    } catch (error) {
+      console.log("Sync failed, will retry later.");
+      // Put them back if the request failed
+      useStore.setState((s) => ({
+        unsyncedTaps: s.unsyncedTaps + tapsToSync
+      }));
+    }
+    syncPromise = null;
+  })();
+  
+  return syncPromise;
 };

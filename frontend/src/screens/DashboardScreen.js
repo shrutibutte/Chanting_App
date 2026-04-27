@@ -5,14 +5,27 @@ import { useStore } from '../store/useStore';
 import { apiCall, syncOfflineCounter } from '../api/client';
 import NetInfo from '@react-native-community/netinfo';
 
-const GODS_LIST = [
-  { id: '1', name: 'Radha', subtitle: 'Divine Consort of Krishna' },
-  { id: '2', name: 'Krishna', subtitle: 'The Supreme Personality' },
-  { id: '3', name: 'Ram', subtitle: 'Maryada Purushottam' },
-  { id: '4', name: 'Shiva', subtitle: 'The Auspicious One' },
-  { id: '5', name: 'Hanuman', subtitle: 'The Devoted Servant' },
-  { id: '6', name: 'Ganesh', subtitle: 'Remover of Obstacles' },
-];
+const GODS_LIST =[
+  { id: '1', name: 'राधा' },
+  { id: '2', name: 'RADHA' },
+  { id: '3', name: 'RAM' },
+  { id: '4', name: 'राम' },
+  { id: '5', name: 'MAHADEV' },
+  { id: '6', name: 'महादेव' },
+  { id: '7', name: 'Om Krishnaya Vasudevaya Haraye Paramatmane Pranata: Kleshanashaya Govindaya Namo Namah' },
+  { id: '8', name: 'ॐ कृष्णाय वासुदेवाय हरये परमात्मने । प्रणतः क्लेशनाशाय गोविंदाय नमो नमः ॥' },
+  { id: '9', name: 'Om Namah Shivaya' },
+  { id: '10', name: 'ॐ नमः शिवाय' },
+  { id: '11', name: 'Om Gan Ganapataye Namaha' },
+  { id: '12', name: 'ॐ गं गणपतये नमः' },
+  { id: '13', name: 'Hare Krishna Hare Krishna Krishna Krishna Hare Hare, Hare Rama Hare Rama Rama Rama Hare Hare' },
+  { id: '14', name: 'हरे कृष्ण हरे कृष्ण कृष्ण कृष्ण हरे हरे, हरे राम हरे राम राम राम हरे हरे' },
+  { id: '15', name: 'ॐ भूर्भुवः स्वः तत्सवितुर्वरेण्यं भर्गो देवस्य धीमहि धियो यो नः प्रचोदयात्' },
+  { id: '16', name: 'ॐ त्र्यम्बकं यजामहे सुगन्धिं पुष्टिवर्धनम् उर्वारुकमिव बन्धनान्मृत्योर्मुक्षीय मामृतात्' },
+  { id: '17', name: 'KRISHNA' },
+  { id: '18', name: 'SHIV' },
+  { id: '19', name: 'NARAYAN' }
+]
 
 export default function DashboardScreen({ onStartChanting, onPressStreak }) {
   const { totalCount, todayCount, logout, setStats, currentNaam, setNaam } = useStore();
@@ -21,7 +34,7 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
   const [isModalVisible, setIsModalVisible] = useState(false);
 
   const handleSelectNaam = (god) => {
-    setNaam({ name: god.name, subtitle: god.subtitle });
+    setNaam({ name: god.name });
     setIsModalVisible(false);
   };
 
@@ -34,7 +47,7 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
       >
         <View style={styles.godTextContainer}>
           <Text style={[styles.godName, isSelected && styles.godNameSelected]}>{item.name}</Text>
-          <Text style={styles.godSubtitle}>{item.subtitle}</Text>
+          {/* <Text style={styles.godSubtitle}>{item.subtitle}</Text> */}
         </View>
         {isSelected && (
           <View style={styles.checkCircle}>
@@ -54,7 +67,13 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
       ]);
       
       const totalEntries = summaryRes.records?.reduce((acc, curr) => acc + curr.count, 0) || 0;
-      setStats(totalEntries, todayRes.totalCount, summaryRes.records || []);
+      
+      const store = useStore.getState();
+      // Keep highest count to prevent stale backend data from overwriting active local chanting
+      const safeTotal = Math.max(store.totalCount, totalEntries);
+      const safeToday = Math.max(store.todayCount, todayRes.totalCount);
+      
+      setStats(safeTotal, safeToday, summaryRes.records || []);
       setSynced(true);
     } catch (error) {
       console.log("Offline mode, showing local stats", error.message);
@@ -139,7 +158,7 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
       ) : (
         <>
           <View style={styles.chantingInfo}>
-            <Text style={styles.chantingSub}>Chanting</Text>
+            {/* <Text style={styles.chantingSub}>Chanting</Text> */}
             <Text style={styles.chantingName}>{currentNaam?.name || 'Krishna'}</Text>
             <TouchableOpacity onPress={() => setIsModalVisible(true)}>
               <Text style={styles.changeNameText}>Change Name</Text>
@@ -169,8 +188,8 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
 
               <View style={styles.circleInner}>
                 <Text style={styles.countText}>{currentMalaProgress}</Text>
-                <Text style={styles.ofText}>of 108</Text>
-                <Text style={styles.percentText}>{percentage}%</Text>
+                <Text style={styles.ofText}>/ 108</Text>
+                {/* <Text style={styles.percentText}>{percentage}%</Text> */}
               </View>
             </View>
           </TouchableOpacity>
@@ -234,6 +253,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 20,
     marginBottom: 20,
+    marginTop: 20,
   },
   headerTitle: {
     fontSize: 24,
@@ -279,7 +299,7 @@ const styles = StyleSheet.create({
   },
   chantingName: {
     color: '#FF6B35',
-    fontSize: 36,
+    fontSize: 60,
     fontWeight: '900',
     marginBottom: 8,
   },
