@@ -5,7 +5,7 @@ import { useStore } from '../store/useStore';
 import { syncOfflineCounter } from '../api/client';
 
 export default function CounterScreen({ onExit }) {
-  const { sessionCount, incrementTap, resetSession } = useStore();
+  const { sessionCount, incrementTap, resetSession, todayCount, totalCount } = useStore();
 
   useEffect(() => {
     // Reset session whenever the screen is opened
@@ -27,7 +27,7 @@ export default function CounterScreen({ onExit }) {
   };
 
   const currentMalaProgress = sessionCount % 108;
-  const malasCompleted = Math.floor(sessionCount / 108);
+  const todayMalasCompleted = Math.floor(todayCount / 108);
 
   return (
     <TouchableOpacity 
@@ -49,11 +49,12 @@ export default function CounterScreen({ onExit }) {
           <Text style={styles.countText}>{sessionCount}</Text>
           <Text style={styles.subtitle}>Tap anywhere to Jaap</Text>
         </View>
-        <View >
-          <Text style={styles.exitText}>Today's</Text>
-        </View>
-        <View style={styles.bottomBar}>
-          <Text style={styles.totalMalasText}>Malas Completed: {malasCompleted}</Text>
+        <View style={styles.statsContainer}>
+          <Text style={styles.statsTitle}>Today's</Text>
+          <Text style={styles.statsDetails}>
+            Count: {todayCount} | Malas: {todayMalasCompleted}
+          </Text>
+          <Text style={styles.totalText}>Total: {totalCount}</Text>
         </View>
       </SafeAreaView>
     </TouchableOpacity>
@@ -112,13 +113,24 @@ const styles = StyleSheet.create({
     fontSize: 18,
     marginTop: 10,
   },
-  bottomBar: {
+  statsContainer: {
     position: 'absolute',
-    bottom: 50,
+    bottom: 40,
+    alignItems: 'center',
   },
-  totalMalasText: {
-    fontSize: 24,
+  statsTitle: {
+    color: '#8E8E8E',
+    fontSize: 16,
+    marginBottom: 4,
+  },
+  statsDetails: {
+    color: '#333333',
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#FF6B35', 
+    marginBottom: 16,
+  },
+  totalText: {
+    color: '#8E8E8E',
+    fontSize: 16,
   },
 });
