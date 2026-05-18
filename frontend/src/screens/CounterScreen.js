@@ -6,7 +6,7 @@ import { useStore } from '../store/useStore';
 import { syncOfflineCounter } from '../api/client';
 
 export default function CounterScreen({ onExit }) {
-  const { incrementTap, todayCount, totalCount } = useStore();
+  const { incrementTap, todayCount, totalCount, dailyGoal } = useStore();
 
   const handleTap = () => {
     // Vibration feedback
@@ -72,10 +72,8 @@ export default function CounterScreen({ onExit }) {
         </View>
 
         <View style={styles.statsContainer}>
-          <Text style={styles.statsTitle}>Today's</Text>
-          <Text style={styles.statsDetails}>
-            Count: {todayCount} | Malas: {todayMalasCompleted}
-          </Text>
+          <Text style={styles.statsDetails}>Today's Goal: {todayCount} / {dailyGoal || 108}</Text>
+          <Text style={styles.statsDetails}>Malas: {todayMalasCompleted}</Text>
           <Text style={styles.totalText}>Total Count: {totalCount}</Text>
         </View>
       </SafeAreaView>

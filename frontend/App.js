@@ -6,18 +6,19 @@ import DashboardScreen from './src/screens/DashboardScreen';
 import CounterScreen from './src/screens/CounterScreen';
 import ProgressScreen from './src/screens/ProgressScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
+import StreakScreen from './src/screens/StreakScreen';
 
 function BottomTabBar({ activeTab, onTabSelect }) {
   return (
     <View style={styles.tabContainer}>
       <TouchableOpacity style={styles.tabItem} onPress={() => onTabSelect('home')}>
-        <Text style={[styles.tabIcon, activeTab === 'home' && styles.tabIconActive]}>🏠</Text>
+        <Text style={[styles.tabIcon, activeTab === 'home' && styles.tabIconActive]}>🧘</Text>
       </TouchableOpacity>
-      
+
       <TouchableOpacity style={styles.tabItem} onPress={() => onTabSelect('chart')}>
         <Text style={[styles.tabIcon, activeTab === 'chart' && styles.tabIconActive]}>📊</Text>
       </TouchableOpacity>
-      
+
       <TouchableOpacity style={styles.tabItem} onPress={() => onTabSelect('book')}>
         <Text style={[styles.tabIcon, activeTab === 'book' && styles.tabIconActive]}>📖</Text>
       </TouchableOpacity>
@@ -56,18 +57,19 @@ export default function App() {
   return (
     <View style={[styles.container, { backgroundColor: '#FFF8F0' }]}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFF8F0" />
-      
+
       {activeTab === 'home' && (
-        <DashboardScreen 
-          onStartChanting={() => setIsChanting(true)} 
-          onPressStreak={() => setActiveTab('chart')} 
+        <DashboardScreen
+          onStartChanting={() => setIsChanting(true)}
+          onPressStreak={() => setActiveTab('streak')}
         />
       )}
-      {activeTab === 'chart' && <ProgressScreen onExit={() => setActiveTab('home')} />}
+      {activeTab === 'streak' && <StreakScreen onExit={() => setActiveTab('home')} />}
+      {activeTab === 'chart' && <ProgressScreen />}
       {activeTab === 'book' && (
-         <SafeAreaView style={{ flex: 1, alignItems: 'center', justifyContent: 'center'}}>
-           <Text style={{color: '#FF6B35', fontSize: 20}}>Audio Stories Coming Soon!</Text>
-         </SafeAreaView>
+        <SafeAreaView style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ color: '#FF6B35', fontSize: 20 }}>Audio Stories Coming Soon!</Text>
+        </SafeAreaView>
       )}
       {activeTab === 'settings' && <SettingsScreen />}
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Switch, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, Switch, TouchableOpacity, Alert, ScrollView, Modal, TextInput } from 'react-native';
 import { useStore } from '../store/useStore';
 import { Ionicons, Feather, MaterialIcons } from '@expo/vector-icons';
 
@@ -10,6 +10,7 @@ export default function SettingsScreen() {
     reminderTime, 
     setReminderSettings,
     dailyGoal,
+    setDailyGoal,
     totalCount
   } = useStore();
 
@@ -20,6 +21,9 @@ export default function SettingsScreen() {
     d.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
     return d;
   });
+
+  const [isGoalModalVisible, setIsGoalModalVisible] = useState(false);
+  const [tempGoal, setTempGoal] = useState('');
 
   const handleToggleReminder = (enabled) => {
     setReminderSettings(enabled, reminderTime);
@@ -47,6 +51,16 @@ export default function SettingsScreen() {
     return `${hours}:${minutes} ${ampm}`;
   };
 
+  const handleSaveGoal = () => {
+    const goalNum = parseInt(tempGoal, 10);
+    if (!isNaN(goalNum) && goalNum > 0) {
+      setDailyGoal(goalNum);
+      setIsGoalModalVisible(false);
+    } else {
+      Alert.alert('Invalid Input', 'Please enter a valid number greater than 0.');
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -60,7 +74,14 @@ export default function SettingsScreen() {
         {/* JAAP SETTINGS */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>JAAP SETTINGS</Text>
-          <TouchableOpacity style={styles.cardRow} activeOpacity={0.7} onPress={() => Alert.alert('Coming Soon', 'Custom goal editing coming soon!')}>
+          <TouchableOpacity 
+            style={styles.cardRow} 
+            activeOpacity={0.7} 
+            onPress={() => {
+              setTempGoal(dailyGoal ? dailyGoal.toString() : '108');
+              setIsGoalModalVisible(true);
+            }}
+          >
             <View style={styles.iconContainer}>
                <Feather name="flag" size={20} color="#FF6B35" />
             </View>
@@ -137,6 +158,35 @@ export default function SettingsScreen() {
            </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Daily Goal Edit Modal */}
+      <Modal
+        visible={isGoalModalVisible}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Set Daily Goal</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={tempGoal}
+              onChangeText={setTempGoal}
+              keyboardType="numeric"
+              placeholder="e.g. 108"
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={styles.modalBtnCancel} onPress={() => setIsGoalModalVisible(false)}>
+                <Text style={styles.modalBtnCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalBtnSave} onPress={handleSaveGoal}>
+                <Text style={styles.modalBtnSaveText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </SafeAreaView>
   );
 }
@@ -253,5 +303,65 @@ const styles = StyleSheet.create({
     color: '#FF6B35', // Clean discreet gray for logout
     fontSize: 16,
     fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 24,
+    width: '80%',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 16,
+  },
+  modalInput: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#E0D6CB',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  modalBtnCancel: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginRight: 8,
+    borderRadius: 8,
+    backgroundColor: '#F0F0F0',
+  },
+  modalBtnSave: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginLeft: 8,
+    borderRadius: 8,
+    backgroundColor: '#FF6B35',
+  },
+  modalBtnCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+  },
+  modalBtnSaveText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFF',
   },
 });

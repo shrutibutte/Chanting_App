@@ -1,236 +1,177 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
 import { useStore } from '../store/useStore';
+import { LineChart } from 'react-native-chart-kit';
 
-export default function ProgressScreen({onExit}) {
+const screenWidth = Dimensions.get('window').width;
+
+export default function ProgressScreen() {
   const { historyRecords, todayCount } = useStore();
-  const [currentMonthDate, setCurrentMonthDate] = useState(new Date());
+  const [timeRange, setTimeRange] = useState('weekly'); // 'weekly', 'monthly', 'yearly'
+  const [offset, setOffset] = useState(0);
 
-  const { groupedByDate, currentStreak, bestStreak, weekTicks } = useMemo(() => {
-    const grouped = {};
+  const { labels, dataPoints, dateRangeText, totalCount } = useMemo(() => {
+    const groupedByDate = {};
     historyRecords.forEach(r => {
-      grouped[r.date] = (grouped[r.date] || 0) + r.count;
+      groupedByDate[r.date] = (groupedByDate[r.date] || 0) + r.count;
     });
 
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
-    grouped[todayStr] = todayCount;
+    groupedByDate[todayStr] = todayCount;
 
-    // Calculate Best Streak
-    let best = 0;
-    let tempStreak = 0;
-    
-    // Sort all dates we have
-    const allDates = Object.keys(grouped).filter(d => grouped[d] > 0).sort();
-    
-    if (allDates.length > 0) {
-      tempStreak = 1;
-      best = 1;
-      for (let i = 1; i < allDates.length; i++) {
-        const prev = new Date(allDates[i-1]);
-        const curr = new Date(allDates[i]);
-        
-        // Difference in days
-        const diffTime = Math.abs(curr - prev);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-        
-        if (diffDays === 1) {
-          tempStreak++;
-          if (tempStreak > best) best = tempStreak;
-        } else {
-          tempStreak = 1; // reset
-        }
+    let chartLabels = [];
+    let chartData = [];
+    let dText = '';
+    let total = 0;
+
+    if (timeRange === 'weekly') {
+      const endDate = new Date();
+      endDate.setDate(endDate.getDate() + (offset * 7));
+      const startDate = new Date(endDate);
+      startDate.setDate(startDate.getDate() - 6);
+
+      dText = `${startDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short'})} - ${endDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short'})}`;
+
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(endDate);
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split('T')[0];
+        chartLabels.push(d.toLocaleDateString('en-US', { weekday: 'short' }));
+        const count = groupedByDate[dateStr] || 0;
+        chartData.push(count);
+        total += count;
       }
-    }
-
-    // Calculate Current Streak
-    let streak = 0;
-    let checkDate = new Date();
-    let cDateStr = checkDate.toISOString().split('T')[0];
-    
-    // If today is 0, start checking yesterday
-    if (!grouped[cDateStr] || grouped[cDateStr] === 0) {
-      checkDate.setDate(checkDate.getDate() - 1);
-      cDateStr = checkDate.toISOString().split('T')[0];
-    }
-    
-    while (grouped[cDateStr] > 0) {
-      streak++;
-      checkDate.setDate(checkDate.getDate() - 1);
-      cDateStr = checkDate.toISOString().split('T')[0];
-    }
-
-    if (streak > best) best = streak;
-
-    // Calculate This Week (Mon to Sun)
-    // Get Monday of current week
-    const currentDay = today.getDay(); // 0 = Sun, 1 = Mon ...
-    const diffToMonday = currentDay === 0 ? -6 : 1 - currentDay;
-    
-    const mondayDate = new Date(today);
-    mondayDate.setDate(today.getDate() + diffToMonday);
-    
-    const weekArr = [];
-    const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(mondayDate);
-      d.setDate(mondayDate.getDate() + i);
-      const dateStr = d.toISOString().split('T')[0];
+    } else if (timeRange === 'monthly') {
+      const targetMonth = new Date(today.getFullYear(), today.getMonth() + offset, 1);
       
-      weekArr.push({
-        label: dayNames[i],
-        active: (grouped[dateStr] || 0) > 0,
-        isFuture: d > today // To gray out future days differently if needed
+      dText = targetMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric'}); // e.g. "May 2026"
+      
+      const year = targetMonth.getFullYear();
+      const month = targetMonth.getMonth();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        // Show labels 1, 2, 4, 6... to match screenshot
+        if (day === 1 || day % 2 === 0) {
+          chartLabels.push(day.toString());
+        } else {
+          chartLabels.push('');
+        }
+
+        const d = new Date(year, month, day);
+        // Correct timezone offset to avoid previous day bugs
+        d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+        const dateStr = d.toISOString().split('T')[0];
+        
+        const count = groupedByDate[dateStr] || 0;
+        chartData.push(count);
+        total += count;
+      }
+    } else if (timeRange === 'yearly') {
+      const year = today.getFullYear() + offset;
+      dText = `${year}`;
+      
+      chartLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      chartData = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+      
+      Object.keys(groupedByDate).forEach(dateStr => {
+        const d = new Date(dateStr);
+        if (d.getFullYear() === year) {
+          const count = groupedByDate[dateStr];
+          chartData[d.getMonth()] += count;
+          total += count;
+        }
       });
     }
 
     return { 
-      groupedByDate: grouped, 
-      currentStreak: streak, 
-      bestStreak: best,
-      weekTicks: weekArr
+      labels: chartLabels, 
+      dataPoints: chartData,
+      dateRangeText: dText,
+      totalCount: total
     };
-  }, [historyRecords, todayCount]);
+  }, [historyRecords, todayCount, timeRange, offset]);
 
-  // Calendar Logic
-  const generateCalendarDays = () => {
-    const year = currentMonthDate.getFullYear();
-    const month = currentMonthDate.getMonth();
-    
-    // 0 = Sunday, 1 = Monday
-    const firstDayOfMonth = new Date(year, month, 1).getDay(); 
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    
-    const days = [];
-    
-    // Fill empty slots for first row
-    for (let i = 0; i < firstDayOfMonth; i++) {
-      days.push(null);
-    }
-    
-    for (let i = 1; i <= daysInMonth; i++) {
-      // Create local date string YYYY-MM-DD
-      const d = new Date(year, month, i);
-      // Adjust timezone offset to get correct ISO string date
-      d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-      const dateStr = d.toISOString().split('T')[0];
-      
-      days.push({
-        dayNumber: i,
-        dateStr: dateStr,
-        active: (groupedByDate[dateStr] || 0) > 0
-      });
-    }
-    return days;
-  };
-
-  const nextMonth = () => {
-    setCurrentMonthDate(new Date(currentMonthDate.setMonth(currentMonthDate.getMonth() + 1)));
-  };
-
-  const prevMonth = () => {
-    setCurrentMonthDate(new Date(currentMonthDate.setMonth(currentMonthDate.getMonth() - 1)));
-  };
-
-  const monthName = currentMonthDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-  const calDays = generateCalendarDays();
-  const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
- const handleExit = () => {
-    // Trigger batch sync immediately upon exiting the counter screen
-    onExit();
-  };
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        {/* back button  */}
-        <TouchableOpacity style={styles.exitButton} onPress={handleExit}>
-                    <Text style={styles.exitText}>←</Text>
-                  </TouchableOpacity>
-        <Text style={styles.headerTitle}>Streak</Text>
-      </View>
       <ScrollView contentContainerStyle={styles.scroll}>
+        <Text style={styles.headerTitle}>Naam Jap Stats</Text>
         
-        {/* Streak Row */}
-        <View style={styles.streakRow}>
-          {/* Current Streak Card */}
-          <View style={[styles.streakBox, styles.currentStreakBox]}>
-            <View style={styles.streakBoxHeader}>
-              <Text style={styles.flameIcon}>🔥</Text>
-              <Text style={styles.currentStreakTitle}>Current</Text>
-            </View>
-            <Text style={styles.currentStreakNumber}>{currentStreak}</Text>
-            <Text style={styles.currentStreakDays}>days</Text>
-          </View>
+        {/* Tabs Row */}
+        <View style={styles.tabsRow}>
+          <TouchableOpacity 
+            style={[styles.tabBtn, timeRange === 'weekly' && styles.tabBtnActive]} 
+            onPress={() => { setTimeRange('weekly'); setOffset(0); }}
+          >
+            <Text style={[styles.tabText, timeRange === 'weekly' && styles.tabTextActive]}>Daily</Text>
+          </TouchableOpacity>
 
-          {/* Best Streak Card */}
-          <View style={[styles.streakBox, styles.bestStreakBox]}>
-            <View style={styles.streakBoxHeader}>
-              <Text style={styles.trophyIcon}>🏆</Text>
-              <Text style={styles.bestStreakTitle}>Best</Text>
-            </View>
-            <Text style={styles.bestStreakNumber}>{bestStreak}</Text>
-            <Text style={styles.bestStreakDays}>days</Text>
-          </View>
+          <TouchableOpacity 
+            style={[styles.tabBtn, timeRange === 'monthly' && styles.tabBtnActive]} 
+            onPress={() => { setTimeRange('monthly'); setOffset(0); }}
+          >
+            <Text style={[styles.tabText, timeRange === 'monthly' && styles.tabTextActive]}>Monthly</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.tabBtn, timeRange === 'yearly' && styles.tabBtnActive]} 
+            onPress={() => { setTimeRange('yearly'); setOffset(0); }}
+          >
+            <Text style={[styles.tabText, timeRange === 'yearly' && styles.tabTextActive]}>Yearly</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* This Week Card */}
+        {/* Chart Card */}
         <View style={styles.card}>
-          <Text style={styles.cardHeader}>🔥This Week</Text>
-
-          <View style={styles.ticksContainer}>
-            {weekTicks.map((tick, index) => (
-              <View key={index} style={styles.tickCol}>
-                <Text style={styles.tickLabel}>{tick.label}</Text>
-                <View style={[styles.tickCircle, tick.active ? styles.tickActive : styles.tickInactive]}>
-                  {tick.active ? (
-                    <Text style={styles.tickCheck}>✓</Text>
-                  ) : (
-                    <Text style={styles.tickClock}>◷</Text>
-                  )}
-                </View>
-              </View>
-            ))}
-          </View>
-
-          <View style={styles.motivationalBox}>
-            <Text style={styles.motivationalText}>📈 Keep the momentum going! 🔥</Text>
-          </View>
-        </View>
-
-        {/* Calendar Card */}
-        <View style={styles.card}>
-          <View style={styles.calendarHeader}>
-            <TouchableOpacity onPress={prevMonth} style={styles.navButton}>
-              <Text style={styles.navButtonText}>{'<'}</Text>
+          
+          {/* Date Navigation */}
+          <View style={styles.dateNavRow}>
+            <TouchableOpacity onPress={() => setOffset(o => o - 1)} style={styles.arrowBtn}>
+              <Text style={styles.arrowText}>{'<'}</Text>
             </TouchableOpacity>
-            <Text style={styles.calendarTitle}>{monthName}</Text>
-            <TouchableOpacity onPress={nextMonth} style={styles.navButton}>
-              <Text style={styles.navButtonText}>{'>'}</Text>
+            <Text style={styles.dateRangeText}>{dateRangeText}</Text>
+            <TouchableOpacity onPress={() => setOffset(o => o + 1)} disabled={offset === 0} style={styles.arrowBtn}>
+              <Text style={[styles.arrowText, offset === 0 && styles.arrowTextDisabled]}>{'>'}</Text>
             </TouchableOpacity>
           </View>
 
-          <View style={styles.calendarGrid}>
-            {/* Days of week */}
-            {dayHeaders.map((day, idx) => (
-              <View key={idx} style={styles.calHeaderCell}>
-                <Text style={styles.calHeaderText}>{day}</Text>
-              </View>
-            ))}
-            
-            {/* Calendar Days */}
-            {calDays.map((dayObj, idx) => (
-              <View key={idx} style={styles.calDayCell}>
-                {dayObj ? (
-                  <View style={[styles.calDayCircle, dayObj.active && styles.calDayActive]}>
-                    <Text style={[styles.calDayText, dayObj.active && styles.calDayTextActive]}>
-                      {dayObj.dayNumber}
-                    </Text>
-                  </View>
-                ) : null}
-              </View>
-            ))}
+          {/* Stats Row */}
+          <View style={styles.statsRow}>
+            <View style={styles.statBox}>
+              <Text style={styles.statValue}>{totalCount}</Text>
+              <Text style={styles.statLabel}>Total Count</Text>
+            </View>
           </View>
+
+          {/* Line Chart */}
+          <LineChart
+            data={{
+              labels: labels.length > 0 ? labels : [''],
+              datasets: [{ data: dataPoints.length > 0 ? dataPoints : [0] }]
+            }}
+            width={screenWidth - 48}
+            height={220}
+            chartConfig={{
+              backgroundColor: '#FFFFFF',
+              backgroundGradientFrom: '#FFFFFF',
+              backgroundGradientTo: '#FFFFFF',
+              decimalPlaces: 0, 
+              color: (opacity = 1) => `rgba(255, 107, 53, ${opacity})`,
+              labelColor: (opacity = 1) => `rgba(0, 0, 0, 0.4)`,
+              style: { borderRadius: 16 },
+              propsForDots: {
+                r: "5",
+                strokeWidth: "2",
+                stroke: "#FF6B35"
+              }
+            }}
+            bezier
+            style={{ marginVertical: 8, borderRadius: 16 }}
+            withInnerLines={false}
+            withOuterLines={false}
+            fromZero={true}
+          />
         </View>
 
       </ScrollView>
@@ -243,224 +184,93 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFF8F0',
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 10,
-    paddingBottom: 10,
-    marginTop: 25,
-    position: 'relative',
-  },
-  exitButton: {
-    position: 'absolute',
-    left: 20,
-    padding: 10,
-    zIndex: 10,
-  },
-  exitText: {
-    fontSize: 24,
-    color: '#333',
-    fontWeight: 'bold',
+  scroll: {
+    padding: 24,
+    paddingBottom: 100,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#333', 
-  },
-  scroll: {
-    padding: 20,
-    paddingBottom: 100,
-  },
-  streakRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    marginTop: 10,
     marginBottom: 20,
   },
-  streakBox: {
-    flex: 1,
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  currentStreakBox: {
-    backgroundColor: '#FF6B35', // Orange
-    marginRight: 10,
-  },
-  bestStreakBox: {
-    backgroundColor: '#FFFFFF', // White
-    marginLeft: 10,
-  },
-  streakBoxHeader: {
+  tabsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
+    justifyContent: 'space-around',
+    marginBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0D6CB', // subtle line under tabs
   },
-  flameIcon: {
+  tabBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  tabBtnActive: {
+    borderBottomWidth: 3,
+    borderBottomColor: '#FF6B35', // orange underline
+  },
+  tabText: {
     fontSize: 16,
-    marginRight: 6,
+    color: '#888',
+    fontWeight: '500',
   },
-  trophyIcon: {
-    fontSize: 16,
-    marginRight: 6,
-  },
-  currentStreakTitle: {
-    color: 'rgba(255,255,255,0.9)',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  bestStreakTitle: {
-    color: '#666',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  currentStreakNumber: {
-    color: '#FFFFFF',
-    fontSize: 48,
+  tabTextActive: {
+    color: '#333',
     fontWeight: 'bold',
-    lineHeight: 52,
-  },
-  bestStreakNumber: {
-    color: '#333333',
-    fontSize: 48,
-    fontWeight: 'bold',
-    lineHeight: 52,
-  },
-  currentStreakDays: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 14,
-  },
-  bestStreakDays: {
-    color: '#999',
-    fontSize: 14,
   },
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 20,
+    paddingVertical: 24,
+    paddingHorizontal: 0,
     marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
+    shadowRadius: 12,
+    elevation: 3, 
   },
-  cardHeader: {
-    fontSize: 18,
-    color: '#333',
-    fontWeight: 'bold',
-    marginBottom: 20,
-  },
-  ticksContainer: {
+  dateNavRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  tickCol: {
-    alignItems: 'center',
-  },
-  tickLabel: {
-    color: '#8E8E8E',
-    fontSize: 12,
-    marginBottom: 8,
-  },
-  tickCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
   },
-  tickActive: {
-    backgroundColor: '#FF6B35',
+  arrowBtn: {
+    paddingHorizontal: 20,
   },
-  tickInactive: {
-    backgroundColor: '#F7F7F7',
-  },
-  tickCheck: {
-    color: '#FFFFFF',
-    fontSize: 14,
+  arrowText: {
+    fontSize: 18,
     fontWeight: 'bold',
+    color: '#333',
   },
-  tickClock: {
-    color: '#D0D0D0',
+  arrowTextDisabled: {
+    color: '#CCC',
+  },
+  dateRangeText: {
     fontSize: 16,
-  },
-  motivationalBox: {
-    backgroundColor: '#FFF8F0',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-  },
-  motivationalText: {
-    color: '#FF6B35',
     fontWeight: '600',
-    fontSize: 14,
+    color: '#666',
+    width: 160,
+    textAlign: 'center',
   },
-  calendarHeader: {
+  statsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center', // Center since there's only one stat now
+    marginBottom: 30,
+  },
+  statBox: {
     alignItems: 'center',
-    marginBottom: 20,
   },
-  navButton: {
-    padding: 8,
-    backgroundColor: '#e7e3e3ff',
-    borderRadius: 8,
-  },
-  navButtonText: {
-    fontSize: 20,
-    color: '#333',
-    fontWeight: 'bold',
-    marginHorizontal: 6
-  },
-  calendarTitle: {
-    fontSize: 18,
+  statValue: {
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#333',
+    marginBottom: 4,
   },
-  calendarGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  calHeaderCell: {
-    width: '14.28%',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  calHeaderText: {
-    color: '#999',
+  statLabel: {
     fontSize: 12,
-    fontWeight: '600',
-  },
-  calDayCell: {
-    width: '14.28%',
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 10,
-  },
-  calDayCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  calDayActive: {
-    backgroundColor: '#FF6B35',
-  },
-  calDayText: {
-    color: '#333',
-    fontSize: 14,
-  },
-  calDayTextActive: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
+    color: '#888',
   }
 });

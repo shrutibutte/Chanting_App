@@ -28,7 +28,7 @@ const GODS_LIST = [
 ]
 
 export default function DashboardScreen({ onStartChanting, onPressStreak }) {
-  const { totalCount, todayCount, logout, setStats, currentNaam, setNaam } = useStore();
+  const { userToken, currentNaam, totalCount, todayCount, sessionCount, logout, dailyGoal, setStats, setNaam } = useStore();
   const [loading, setLoading] = useState(false);
   const [synced, setSynced] = useState(true);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -204,8 +204,11 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
               <View style={styles.verticalDivider} />
 
               <View style={styles.statColumn}>
-                <Text style={styles.statNumber}>{todayCount}</Text>
-                <Text style={styles.statLabel}>Today's</Text>
+                <Text style={styles.statNumber}>
+                  {todayCount}
+                  <Text style={{fontSize: 14, color: '#A0A0A0'}}>{` / ${dailyGoal || 108}`}</Text>
+                </Text>
+                <Text style={styles.statLabel}>Today's Goal</Text>
               </View>
 
               <View style={styles.verticalDivider} />
