@@ -27,7 +27,7 @@ export default function CounterScreen({ onExit }) {
 
   const percentage = Math.floor((currentMalaProgress / 108) * 100);
   const size = 280;
-  const strokeWidth = 20;
+  const strokeWidth = 10;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
@@ -76,7 +76,7 @@ export default function CounterScreen({ onExit }) {
           <Text style={styles.statsDetails}>
             Count: {todayCount} | Malas: {todayMalasCompleted}
           </Text>
-          <Text style={styles.totalText}>Total: {totalCount}</Text>
+          <Text style={styles.totalText}>Total Count: {totalCount}</Text>
         </View>
       </SafeAreaView>
     </TouchableOpacity>
@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
   },
   countText: {
     color: '#FF6B35',
-    fontSize: 48,
+    fontSize: 30,
     fontWeight: 'bold',
   },
   ofText: {

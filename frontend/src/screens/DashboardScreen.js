@@ -5,7 +5,7 @@ import { useStore } from '../store/useStore';
 import { apiCall, syncOfflineCounter } from '../api/client';
 import NetInfo from '@react-native-community/netinfo';
 
-const GODS_LIST =[
+const GODS_LIST = [
   { id: '1', name: 'राधा' },
   { id: '2', name: 'RADHA' },
   { id: '3', name: 'RAM' },
@@ -41,8 +41,8 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
   const renderGodItem = ({ item }) => {
     const isSelected = currentNaam?.name === item.name;
     return (
-      <TouchableOpacity 
-        style={[styles.godItem, isSelected && styles.godItemSelected]} 
+      <TouchableOpacity
+        style={[styles.godItem, isSelected && styles.godItemSelected]}
         onPress={() => handleSelectNaam(item)}
       >
         <View style={styles.godTextContainer}>
@@ -65,14 +65,14 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
         apiCall('/stats/today'),
         apiCall('/stats/summary')
       ]);
-      
+
       const totalEntries = summaryRes.records?.reduce((acc, curr) => acc + curr.count, 0) || 0;
-      
+
       const store = useStore.getState();
       // Keep highest count to prevent stale backend data from overwriting active local chanting
       const safeTotal = Math.max(store.totalCount, totalEntries);
       const safeToday = Math.max(store.todayCount, todayRes.totalCount);
-      
+
       setStats(safeTotal, safeToday, summaryRes.records || []);
       setSynced(true);
     } catch (error) {
@@ -104,8 +104,8 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
   const percentage = Math.floor((currentMalaProgress / 108) * 100);
   const displayTotalMalas = Math.floor(totalCount / 108);
 
-  const size = 280;
-  const strokeWidth = 20;
+  const size = 250;
+  const strokeWidth = 10;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
@@ -115,7 +115,7 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
   useStore.getState().historyRecords.forEach(r => {
     groupedByDate[r.date] = (groupedByDate[r.date] || 0) + r.count;
   });
-  
+
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
   groupedByDate[todayStr] = todayCount;
@@ -165,9 +165,9 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity 
-            style={styles.tapArea} 
-            activeOpacity={0.8} 
+          <TouchableOpacity
+            style={styles.tapArea}
+            activeOpacity={0.8}
             onPress={onStartChanting}
           >
             <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center', marginBottom: 40 }}>
@@ -175,20 +175,20 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
                 {/* Background Ring */}
                 <Circle stroke="#FFE6D3" fill="none" cx={size / 2} cy={size / 2} r={radius} strokeWidth={strokeWidth} />
                 {/* Foreground Progress Ring */}
-                <Circle 
-                  stroke="#FF6B35" 
-                  fill="none" 
-                  cx={size / 2} cy={size / 2} r={radius} strokeWidth={strokeWidth} 
-                  strokeDasharray={`${circumference} ${circumference}`} 
-                  strokeDashoffset={strokeDashoffset} 
-                  strokeLinecap="round" 
-                  transform={`rotate(-90, ${size / 2}, ${size / 2})`} 
+                <Circle
+                  stroke="#FF6B35"
+                  fill="none"
+                  cx={size / 2} cy={size / 2} r={radius} strokeWidth={strokeWidth}
+                  strokeDasharray={`${circumference} ${circumference}`}
+                  strokeDashoffset={strokeDashoffset}
+                  strokeLinecap="round"
+                  transform={`rotate(-90, ${size / 2}, ${size / 2})`}
                 />
               </Svg>
 
               <View style={styles.circleInner}>
-                <Text style={styles.countText}>{currentMalaProgress}</Text>
-                <Text style={styles.ofText}>/ 108</Text>
+                <Text style={styles.countText}>{currentMalaProgress}/108</Text>
+                {/* <Text style={styles.ofText}>{currentMalaProgress}/ 108</Text> */}
                 {/* <Text style={styles.percentText}>{percentage}%</Text> */}
               </View>
             </View>
@@ -198,14 +198,21 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
             <View style={styles.statsCard}>
               <View style={styles.statColumn}>
                 <Text style={styles.statNumber}>{displayTotalMalas}</Text>
-                <Text style={styles.statLabel}>Malas Completed</Text>
+                <Text style={styles.statLabel}>Malas</Text>
               </View>
-              
+
               <View style={styles.verticalDivider} />
-              
+
               <View style={styles.statColumn}>
                 <Text style={styles.statNumber}>{todayCount}</Text>
-                <Text style={styles.statLabel}>Total Jaap Count</Text>
+                <Text style={styles.statLabel}>Today's</Text>
+              </View>
+
+              <View style={styles.verticalDivider} />
+
+              <View style={styles.statColumn}>
+                <Text style={styles.statNumber}>{totalCount}</Text>
+                <Text style={styles.statLabel}>Total Count</Text>
               </View>
             </View>
           </View>
@@ -326,7 +333,7 @@ const styles = StyleSheet.create({
   },
   countText: {
     color: '#FF6B35',
-    fontSize: 72,
+    fontSize: 40,
     fontWeight: 'bold',
     lineHeight: 80,
   },

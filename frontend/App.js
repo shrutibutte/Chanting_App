@@ -63,7 +63,7 @@ export default function App() {
           onPressStreak={() => setActiveTab('chart')} 
         />
       )}
-      {activeTab === 'chart' && <ProgressScreen />}
+      {activeTab === 'chart' && <ProgressScreen onExit={() => setActiveTab('home')} />}
       {activeTab === 'book' && (
          <SafeAreaView style={{ flex: 1, alignItems: 'center', justifyContent: 'center'}}>
            <Text style={{color: '#FF6B35', fontSize: 20}}>Audio Stories Coming Soon!</Text>

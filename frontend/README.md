@@ -15,6 +15,13 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    ```bash
    npx expo start
    npx expo start -c
+   npx expo start --lan -c
+   open cmd 
+   ipconfig
+   find ip v4 address 
+   replace in api file 
+   and connect laptop and mobile with same network 
+   
 
    ```
 

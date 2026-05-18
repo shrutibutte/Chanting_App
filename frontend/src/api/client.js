@@ -4,7 +4,7 @@ import NetInfo from '@react-native-community/netinfo';
 // Set your computer's local IP Address below if testing on physical device on the same Wifi
 // Use 'http://10.0.2.2:3030' for standard Android Emulator
 // Set your computer's local IP Address below if testing on physical device on the same Wifi
-const API_URL = 'http://192.168.1.4:3030'; 
+const API_URL = 'http://10.27.77.129:3030';
 
 export const apiCall = async (endpoint, method = 'GET', body = null) => {
   const { userToken } = useStore.getState();
@@ -29,6 +29,11 @@ export const apiCall = async (endpoint, method = 'GET', body = null) => {
     const response = await fetch(`${API_URL}${endpoint}`, options);
     const data = await response.json();
     if (!response.ok) {
+      // If the token is invalid or missing, clear the store to force a re-login
+      if (response.status === 401 || response.status === 403) {
+        useStore.getState().logout();
+      }
+      
       const errorMessage = data.details ? `${data.error}: ${data.details}` : (data.error || 'API Request Failed');
       throw new Error(errorMessage);
     }
@@ -44,7 +49,7 @@ let syncPromise = null;
 // Batch Sync Logic
 export const syncOfflineCounter = async () => {
   if (syncPromise) return syncPromise;
-  
+
   syncPromise = (async () => {
     const state = useStore.getState();
     const tapsToSync = state.unsyncedTaps;
@@ -61,9 +66,9 @@ export const syncOfflineCounter = async () => {
 
     try {
       console.log(`Syncing ${tapsToSync} taps to backend...`);
-      await apiCall('/sync-taps', 'POST', { 
-        count: tapsToSync, 
-        date: new Date().toISOString().split('T')[0] 
+      await apiCall('/sync-taps', 'POST', {
+        count: tapsToSync,
+        date: new Date().toISOString().split('T')[0]
       });
       console.log(`Sync successful!`);
     } catch (error) {
@@ -75,6 +80,6 @@ export const syncOfflineCounter = async () => {
     }
     syncPromise = null;
   })();
-  
+
   return syncPromise;
 };
