@@ -56,6 +56,10 @@ export const useStore = create(
         unsyncedTaps: Math.max(0, state.unsyncedTaps - batchSize)
       })),
 
+      // Sync Lock
+      isSyncing: false,
+      setIsSyncing: (status) => set({ isSyncing: status }),
+
       // Sync backend stats with local stats
       setStats: (total, today, records = []) => set({ 
         totalCount: total, 

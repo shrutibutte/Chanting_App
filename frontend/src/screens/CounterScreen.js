@@ -14,6 +14,12 @@ export default function CounterScreen({ onExit }) {
 
     // Increment local state instantly for zero-latency UI
     incrementTap();
+    
+    // Automatic milestone sync (1 Mala)
+    const state = useStore.getState();
+    if (state.unsyncedTaps >= 108 && !state.isSyncing) {
+      syncOfflineCounter();
+    }
   };
 
   const handleExit = () => {

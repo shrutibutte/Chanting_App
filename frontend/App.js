@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, StatusBar, TouchableOpacity, Text, SafeAreaView } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, StyleSheet, StatusBar, TouchableOpacity, Text, SafeAreaView, AppState } from 'react-native';
 import { useStore } from './src/store/useStore';
+import { syncOfflineCounter } from './src/api/client';
 import AuthScreen from './src/screens/AuthScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
 import CounterScreen from './src/screens/CounterScreen';
@@ -34,6 +35,34 @@ export default function App() {
   const [isChanting, setIsChanting] = useState(false);
   const [activeTab, setActiveTab] = useState('home');
   const userToken = useStore((state) => state.userToken);
+  const appState = useRef(AppState.currentState);
+
+  useEffect(() => {
+    // 1. AppState Listener for Background/Close Sync
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (
+        appState.current.match(/active/) &&
+        nextAppState.match(/inactive|background/)
+      ) {
+        // App went to background - trigger sync
+        syncOfflineCounter();
+      }
+      appState.current = nextAppState;
+    });
+
+    // 2. Interval Backup Sync (Every 60 seconds)
+    const intervalId = setInterval(() => {
+      const state = useStore.getState();
+      if (state.unsyncedTaps > 0 && !state.isSyncing) {
+        syncOfflineCounter();
+      }
+    }, 60000);
+
+    return () => {
+      subscription.remove();
+      clearInterval(intervalId);
+    };
+  }, []);
 
   // Very lean conditional rendering approach as requested
   if (!userToken) {

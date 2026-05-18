@@ -48,10 +48,12 @@ let syncPromise = null;
 
 // Batch Sync Logic
 export const syncOfflineCounter = async () => {
-  if (syncPromise) return syncPromise;
+  const state = useStore.getState();
+  
+  // Prevent concurrent syncs using the global lock
+  if (state.isSyncing || syncPromise) return syncPromise;
 
   syncPromise = (async () => {
-    const state = useStore.getState();
     const tapsToSync = state.unsyncedTaps;
 
     // Don't sync if internet is out or nothing to sync
@@ -61,8 +63,7 @@ export const syncOfflineCounter = async () => {
       return;
     }
 
-    // Optimistically clear the taps so concurrent calls don't double count
-    state.clearUnsynced(tapsToSync);
+    state.setIsSyncing(true);
 
     try {
       console.log(`Syncing ${tapsToSync} taps to backend...`);
@@ -70,16 +71,19 @@ export const syncOfflineCounter = async () => {
         count: tapsToSync,
         date: new Date().toISOString().split('T')[0]
       });
-      console.log(`Sync successful!`);
+      
+      // ONLY clear taps from local storage after a successful HTTP 200 response
+      useStore.getState().clearUnsynced(tapsToSync);
+      console.log(`Sync successful! Cleared ${tapsToSync} taps from local storage.`);
     } catch (error) {
-      console.log("Sync failed, will retry later.");
-      // Put them back if the request failed
-      useStore.setState((s) => ({
-        unsyncedTaps: s.unsyncedTaps + tapsToSync
-      }));
+      console.log("Sync failed. Taps safely kept in local storage. Will retry automatically.");
+      // Taps were never cleared, so no need to put them back!
+    } finally {
+      useStore.getState().setIsSyncing(false);
+      syncPromise = null;
     }
-    syncPromise = null;
   })();
 
   return syncPromise;
 };
+
