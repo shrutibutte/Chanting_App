@@ -102,7 +102,7 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
 
   const currentMalaProgress = todayCount % 108;
   const percentage = Math.floor((currentMalaProgress / 108) * 100);
-  const displayTotalMalas = Math.floor(totalCount / 108);
+  const displayTotalMalas = Math.floor(todayCount / 108);
 
   const size = 250;
   const strokeWidth = 10;
@@ -151,76 +151,83 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
         </View>
       )}
 
-      {loading ? (
-        <View style={{ flex: 1, justifyContent: 'center' }}>
-          <ActivityIndicator size="large" color="#FF6B35" />
-        </View>
-      ) : (
-        <>
-          <View style={styles.chantingInfo}>
-            {/* <Text style={styles.chantingSub}>Chanting</Text> */}
-            <Text style={styles.chantingName}>{currentNaam?.name || 'Krishna'}</Text>
-            <TouchableOpacity onPress={() => setIsModalVisible(true)}>
-              <Text style={styles.changeNameText}>Change Name</Text>
-            </TouchableOpacity>
-          </View>
-
-          <TouchableOpacity
-            style={styles.tapArea}
-            activeOpacity={0.8}
-            onPress={onStartChanting}
-          >
-            <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center', marginBottom: 40 }}>
-              <Svg width={size} height={size} style={{ position: 'absolute' }}>
-                {/* Background Ring */}
-                <Circle stroke="#FFE6D3" fill="none" cx={size / 2} cy={size / 2} r={radius} strokeWidth={strokeWidth} />
-                {/* Foreground Progress Ring */}
-                <Circle
-                  stroke="#FF6B35"
-                  fill="none"
-                  cx={size / 2} cy={size / 2} r={radius} strokeWidth={strokeWidth}
-                  strokeDasharray={`${circumference} ${circumference}`}
-                  strokeDashoffset={strokeDashoffset}
-                  strokeLinecap="round"
-                  transform={`rotate(-90, ${size / 2}, ${size / 2})`}
-                />
-              </Svg>
-
-              <View style={styles.circleInner}>
-                <Text style={styles.countText}>{currentMalaProgress}/108</Text>
-                {/* <Text style={styles.ofText}>{currentMalaProgress}/ 108</Text> */}
-                {/* <Text style={styles.percentText}>{percentage}%</Text> */}
-              </View>
-            </View>
-          </TouchableOpacity>
-
-          <View style={styles.statsCardWrapper}>
-            <View style={styles.statsCard}>
-              <View style={styles.statColumn}>
-                <Text style={styles.statNumber}>{displayTotalMalas}</Text>
-                <Text style={styles.statLabel}>Malas</Text>
-              </View>
-
-              <View style={styles.verticalDivider} />
-
-              <View style={styles.statColumn}>
-                <Text style={styles.statNumber}>
-                  {todayCount}
-                  <Text style={{fontSize: 14, color: '#A0A0A0'}}>{` / ${dailyGoal || 108}`}</Text>
-                </Text>
-                <Text style={styles.statLabel}>Today's Goal</Text>
-              </View>
-
-              <View style={styles.verticalDivider} />
-
-              <View style={styles.statColumn}>
-                <Text style={styles.statNumber}>{totalCount}</Text>
-                <Text style={styles.statLabel}>Total Count</Text>
-              </View>
-            </View>
-          </View>
-        </>
+      {/* Background sync indicator (optional, very subtle) */}
+      {loading && (
+        <ActivityIndicator size="small" color="#FF6B35" style={{ position: 'absolute', top: 20, right: 24 }} />
       )}
+
+      <View style={styles.chantingInfo}>
+        <Text 
+          style={[
+            styles.chantingName, 
+            { 
+              fontSize: (currentNaam?.name || 'Krishna').length > 40 ? 18 : (currentNaam?.name || 'Krishna').length > 15 ? 25 : 50,
+              textAlign: 'center',
+              paddingHorizontal: 20
+            }
+          ]}
+          numberOfLines={4}
+          adjustsFontSizeToFit
+        >
+          {currentNaam?.name || 'Krishna'}
+        </Text>
+        <TouchableOpacity onPress={() => setIsModalVisible(true)}>
+          <Text style={styles.changeNameText}>Change Name</Text>
+        </TouchableOpacity>
+      </View>
+
+      <TouchableOpacity
+        style={styles.tapArea}
+        activeOpacity={0.8}
+        onPress={onStartChanting}
+      >
+        <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center', marginBottom: 40 }}>
+          <Svg width={size} height={size} style={{ position: 'absolute' }}>
+            {/* Background Ring */}
+            <Circle stroke="#FFE6D3" fill="none" cx={size / 2} cy={size / 2} r={radius} strokeWidth={strokeWidth} />
+            {/* Foreground Progress Ring */}
+            <Circle
+              stroke="#FF6B35"
+              fill="none"
+              cx={size / 2} cy={size / 2} r={radius} strokeWidth={strokeWidth}
+              strokeDasharray={`${circumference} ${circumference}`}
+              strokeDashoffset={strokeDashoffset}
+              strokeLinecap="round"
+              transform={`rotate(-90, ${size / 2}, ${size / 2})`}
+            />
+          </Svg>
+
+          <View style={styles.circleInner}>
+            <Text style={styles.countText}>{currentMalaProgress}/108</Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+
+      <View style={styles.statsCardWrapper}>
+        <View style={styles.statsCard}>
+          <View style={styles.statColumn}>
+            <Text style={styles.statNumber}>{displayTotalMalas}</Text>
+            <Text style={styles.statLabel}>Malas</Text>
+          </View>
+
+          <View style={styles.verticalDivider} />
+
+          <View style={styles.statColumn}>
+            <Text style={styles.statNumber}>
+              {todayCount}
+              <Text style={{fontSize: 14, color: '#A0A0A0'}}>{` / ${dailyGoal || 108}`}</Text>
+            </Text>
+            <Text style={styles.statLabel}>Today's Goal</Text>
+          </View>
+
+          <View style={styles.verticalDivider} />
+
+          <View style={styles.statColumn}>
+            <Text style={styles.statNumber}>{totalCount}</Text>
+            <Text style={styles.statLabel}>Total Count</Text>
+          </View>
+        </View>
+      </View>
 
       {/* Select God Modal */}
       <Modal
@@ -261,14 +268,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 20,
-    marginBottom: 20,
-    marginTop: 20,
+    paddingTop: 40,
+    marginBottom: 10,
+    marginTop: 10,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
-    color: '#FF6B35', // Vibrant Orange
+    color: '#FF6B35',
   },
   streakBadgeWrapper: {
     flexDirection: 'row',

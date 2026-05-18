@@ -222,11 +222,15 @@ export default function StreakScreen({onExit}) {
             {calDays.map((dayObj, idx) => (
               <View key={idx} style={styles.calDayCell}>
                 {dayObj ? (
-                  <View style={[styles.calDayCircle, dayObj.active && styles.calDayActive]}>
-                    <Text style={[styles.calDayText, dayObj.active && styles.calDayTextActive]}>
-                      {dayObj.dayNumber}
-                    </Text>
-                  </View>
+                  dayObj.active ? (
+                    <Text style={{ fontSize: 22 }}>🔥</Text>
+                  ) : (
+                    <View style={styles.calDayCircle}>
+                      <Text style={styles.calDayText}>
+                        {dayObj.dayNumber}
+                      </Text>
+                    </View>
+                  )
                 ) : null}
               </View>
             ))}
@@ -255,12 +259,17 @@ const styles = StyleSheet.create({
   exitButton: {
     position: 'absolute',
     left: 20,
-    padding: 10,
+    paddingInline: 10,
+    backgroundColor: '#FFF8F0',
+    borderRadius: 16,
+    borderWidth: 1,
+    color: '#FF6B35',
+    borderColor: 'rgba(226, 84, 13, 1)8F0',
     zIndex: 10,
   },
   exitText: {
-    fontSize: 24,
-    color: '#333',
+    fontSize: 20,
+    color: '#FF6B35',
     fontWeight: 'bold',
   },
   headerTitle: {

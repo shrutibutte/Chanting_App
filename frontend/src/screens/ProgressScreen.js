@@ -31,7 +31,7 @@ export default function ProgressScreen() {
       const startDate = new Date(endDate);
       startDate.setDate(startDate.getDate() - 6);
 
-      dText = `${startDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short'})} - ${endDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short'})}`;
+      dText = `${startDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })} - ${endDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}`;
 
       for (let i = 6; i >= 0; i--) {
         const d = new Date(endDate);
@@ -44,9 +44,9 @@ export default function ProgressScreen() {
       }
     } else if (timeRange === 'monthly') {
       const targetMonth = new Date(today.getFullYear(), today.getMonth() + offset, 1);
-      
-      dText = targetMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric'}); // e.g. "May 2026"
-      
+
+      dText = targetMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }); // e.g. "May 2026"
+
       const year = targetMonth.getFullYear();
       const month = targetMonth.getMonth();
       const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -63,7 +63,7 @@ export default function ProgressScreen() {
         // Correct timezone offset to avoid previous day bugs
         d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
         const dateStr = d.toISOString().split('T')[0];
-        
+
         const count = groupedByDate[dateStr] || 0;
         chartData.push(count);
         total += count;
@@ -71,10 +71,10 @@ export default function ProgressScreen() {
     } else if (timeRange === 'yearly') {
       const year = today.getFullYear() + offset;
       dText = `${year}`;
-      
+
       chartLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       chartData = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-      
+
       Object.keys(groupedByDate).forEach(dateStr => {
         const d = new Date(dateStr);
         if (d.getFullYear() === year) {
@@ -85,8 +85,8 @@ export default function ProgressScreen() {
       });
     }
 
-    return { 
-      labels: chartLabels, 
+    return {
+      labels: chartLabels,
       dataPoints: chartData,
       dateRangeText: dText,
       totalCount: total
@@ -96,26 +96,28 @@ export default function ProgressScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.headerTitle}>Naam Jap Stats</Text>
-        
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Progress</Text>
+        </View>
+
         {/* Tabs Row */}
         <View style={styles.tabsRow}>
-          <TouchableOpacity 
-            style={[styles.tabBtn, timeRange === 'weekly' && styles.tabBtnActive]} 
+          <TouchableOpacity
+            style={[styles.tabBtn, timeRange === 'weekly' && styles.tabBtnActive]}
             onPress={() => { setTimeRange('weekly'); setOffset(0); }}
           >
             <Text style={[styles.tabText, timeRange === 'weekly' && styles.tabTextActive]}>Daily</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={[styles.tabBtn, timeRange === 'monthly' && styles.tabBtnActive]} 
+          <TouchableOpacity
+            style={[styles.tabBtn, timeRange === 'monthly' && styles.tabBtnActive]}
             onPress={() => { setTimeRange('monthly'); setOffset(0); }}
           >
             <Text style={[styles.tabText, timeRange === 'monthly' && styles.tabTextActive]}>Monthly</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={[styles.tabBtn, timeRange === 'yearly' && styles.tabBtnActive]} 
+          <TouchableOpacity
+            style={[styles.tabBtn, timeRange === 'yearly' && styles.tabBtnActive]}
             onPress={() => { setTimeRange('yearly'); setOffset(0); }}
           >
             <Text style={[styles.tabText, timeRange === 'yearly' && styles.tabTextActive]}>Yearly</Text>
@@ -124,7 +126,7 @@ export default function ProgressScreen() {
 
         {/* Chart Card */}
         <View style={styles.card}>
-          
+
           {/* Date Navigation */}
           <View style={styles.dateNavRow}>
             <TouchableOpacity onPress={() => setOffset(o => o - 1)} style={styles.arrowBtn}>
@@ -156,7 +158,7 @@ export default function ProgressScreen() {
               backgroundColor: '#FFFFFF',
               backgroundGradientFrom: '#FFFFFF',
               backgroundGradientTo: '#FFFFFF',
-              decimalPlaces: 0, 
+              decimalPlaces: 0,
               color: (opacity = 1) => `rgba(255, 107, 53, ${opacity})`,
               labelColor: (opacity = 1) => `rgba(0, 0, 0, 0.4)`,
               style: { borderRadius: 16 },
@@ -185,15 +187,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF8F0',
   },
   scroll: {
-    padding: 24,
+    // padding: 24,
     paddingBottom: 100,
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333', 
+  header: {
+    paddingHorizontal: 24,
+    paddingTop: 40,
+    marginBottom: 10,
     marginTop: 10,
-    marginBottom: 20,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#FF6B35',
   },
   tabsRow: {
     flexDirection: 'row',
@@ -229,7 +235,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
     shadowRadius: 12,
-    elevation: 3, 
+    elevation: 3,
   },
   dateNavRow: {
     flexDirection: 'row',

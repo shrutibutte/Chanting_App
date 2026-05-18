@@ -67,8 +67,13 @@ export default function App() {
       {activeTab === 'streak' && <StreakScreen onExit={() => setActiveTab('home')} />}
       {activeTab === 'chart' && <ProgressScreen />}
       {activeTab === 'book' && (
-        <SafeAreaView style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ color: '#FF6B35', fontSize: 20 }}>Audio Stories Coming Soon!</Text>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#FFF8F0' }}>
+          <View style={{ paddingHorizontal: 24, paddingTop: 40, marginBottom: 10, marginTop: 10 }}>
+            <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#FF6B35' }}>Stories</Text>
+          </View>
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ color: '#FF6B35', fontSize: 20 }}>Audio Stories Coming Soon!</Text>
+          </View>
         </SafeAreaView>
       )}
       {activeTab === 'settings' && <SettingsScreen />}

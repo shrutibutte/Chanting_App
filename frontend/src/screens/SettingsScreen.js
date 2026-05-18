@@ -24,22 +24,23 @@ export default function SettingsScreen() {
 
   const [isGoalModalVisible, setIsGoalModalVisible] = useState(false);
   const [tempGoal, setTempGoal] = useState('');
+  
+  const [isTimeModalVisible, setIsTimeModalVisible] = useState(false);
+  const [tempTime, setTempTime] = useState('');
 
   const handleToggleReminder = (enabled) => {
     setReminderSettings(enabled, reminderTime);
     if (enabled) {
       Alert.alert(
         'Reminder On', 
-        `Daily Reminder set to ${formatDisplayTime(localTime)}. (Running in Expo Go simulated mode)`
+        `Daily Reminder set to ${formatDisplayTime(localTime)}.`
       );
     }
   };
 
   const handlePressTime = () => {
-    Alert.alert(
-      'Custom Dev Client Required',
-      'The custom native time picker will be available automatically once you compile the native Android app using EAS! Defaulting to 8:00 AM for now.'
-    );
+    setTempTime(reminderTime || '08:00');
+    setIsTimeModalVisible(true);
   };
 
   const formatDisplayTime = (dateObj) => {
@@ -58,6 +59,20 @@ export default function SettingsScreen() {
       setIsGoalModalVisible(false);
     } else {
       Alert.alert('Invalid Input', 'Please enter a valid number greater than 0.');
+    }
+  };
+
+  const handleSaveTime = () => {
+    const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+    if (timeRegex.test(tempTime)) {
+      setReminderSettings(isReminderEnabled, tempTime);
+      const [hours, minutes] = tempTime.split(':');
+      const d = new Date();
+      d.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+      setLocalTime(d);
+      setIsTimeModalVisible(false);
+    } else {
+      Alert.alert('Invalid Time', 'Please enter a valid time in 24-hour format (e.g. 08:30 or 15:00)');
     }
   };
 
@@ -187,6 +202,36 @@ export default function SettingsScreen() {
         </View>
       </Modal>
 
+      {/* Daily Reminder Edit Modal */}
+      <Modal
+        visible={isTimeModalVisible}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Set Reminder Time</Text>
+            <Text style={{color: '#888', marginBottom: 16, fontSize: 13}}>Enter time in 24-hour format (HH:mm)</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={tempTime}
+              onChangeText={setTempTime}
+              keyboardType="numbers-and-punctuation"
+              placeholder="e.g. 08:00 or 15:30"
+              maxLength={5}
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={styles.modalBtnCancel} onPress={() => setIsTimeModalVisible(false)}>
+                <Text style={styles.modalBtnCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalBtnSave} onPress={handleSaveTime}>
+                <Text style={styles.modalBtnSaveText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </SafeAreaView>
   );
 }
@@ -205,7 +250,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#FF6B35', // Match the image orange
+    color: '#FF6B35',
   },
   scrollContent: {
     paddingHorizontal: 20,
