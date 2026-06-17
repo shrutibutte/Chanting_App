@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { useStore } from '../store/useStore';
 
 export default function StreakScreen({onExit}) {
@@ -145,8 +146,11 @@ export default function StreakScreen({onExit}) {
       <View style={styles.header}>
         {/* back button  */}
         <TouchableOpacity style={styles.exitButton} onPress={handleExit}>
-                    <Text style={styles.exitText}>←</Text>
-                  </TouchableOpacity>
+          <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF6B35" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <Path d="M9 14L4 9l5-5" />
+            <Path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11" />
+          </Svg>
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>Streak</Text>
       </View>
       <ScrollView contentContainerStyle={styles.scroll}>
@@ -176,7 +180,7 @@ export default function StreakScreen({onExit}) {
 
         {/* This Week Card */}
         <View style={styles.card}>
-          <Text style={styles.cardHeader}>🔥This Week</Text>
+          <Text style={styles.cardHeader}>🔥 This Week</Text>
 
           <View style={styles.ticksContainer}>
             {weekTicks.map((tick, index) => (
@@ -193,8 +197,9 @@ export default function StreakScreen({onExit}) {
             ))}
           </View>
 
+          {/* Motivational Footer */}
           <View style={styles.motivationalBox}>
-            <Text style={styles.motivationalText}>📈 Keep the momentum going! 🔥</Text>
+            <Text style={styles.motivationalText}>🔥 Keep up your daily chanting streak! 🔥</Text>
           </View>
         </View>
 
@@ -222,20 +227,17 @@ export default function StreakScreen({onExit}) {
             {calDays.map((dayObj, idx) => (
               <View key={idx} style={styles.calDayCell}>
                 {dayObj ? (
-                  dayObj.active ? (
-                    <Text style={{ fontSize: 22 }}>🔥</Text>
-                  ) : (
-                    <View style={styles.calDayCircle}>
-                      <Text style={styles.calDayText}>
-                        {dayObj.dayNumber}
-                      </Text>
-                    </View>
-                  )
+                  <View style={[styles.calDayCircle, dayObj.active && styles.calDayActive]}>
+                    <Text style={[styles.calDayText, dayObj.active && styles.calDayTextActive]}>
+                      {dayObj.dayNumber}
+                    </Text>
+                  </View>
                 ) : null}
               </View>
             ))}
           </View>
         </View>
+
 
       </ScrollView>
     </SafeAreaView>
@@ -245,129 +247,132 @@ export default function StreakScreen({onExit}) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF8F0',
+    backgroundColor: '#FFFDF9',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 10,
+    paddingTop: 40,
     paddingBottom: 10,
-    marginTop: 25,
+    marginTop: 10,
     position: 'relative',
   },
   exitButton: {
     position: 'absolute',
     left: 20,
-    paddingInline: 10,
-    backgroundColor: '#FFF8F0',
-    borderRadius: 16,
+    top: 38,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     borderWidth: 1,
-    color: '#FF6B35',
-    borderColor: 'rgba(226, 84, 13, 1)8F0',
+    borderColor: '#FF6B35',
+    backgroundColor: '#FFFDF9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#FF6B35',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
     zIndex: 10,
   },
-  exitText: {
-    fontSize: 20,
-    color: '#FF6B35',
-    fontWeight: 'bold',
-  },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#333', 
   },
   scroll: {
-    padding: 20,
-    paddingBottom: 100,
+    padding: 16,
+    paddingBottom: 40,
   },
   streakRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 14,
   },
   streakBox: {
     flex: 1,
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: 24,
+    padding: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
   },
   currentStreakBox: {
-    backgroundColor: '#FF6B35', // Orange
-    marginRight: 10,
+    backgroundColor: '#FF6B35',
+    marginRight: 6,
   },
   bestStreakBox: {
-    backgroundColor: '#FFFFFF', // White
-    marginLeft: 10,
+    backgroundColor: '#FFFFFF',
+    marginLeft: 6,
   },
   streakBoxHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   flameIcon: {
-    fontSize: 16,
+    fontSize: 14,
     marginRight: 6,
   },
   trophyIcon: {
-    fontSize: 16,
+    fontSize: 14,
     marginRight: 6,
   },
   currentStreakTitle: {
     color: 'rgba(255,255,255,0.9)',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
   },
   bestStreakTitle: {
     color: '#666',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
   },
   currentStreakNumber: {
     color: '#FFFFFF',
-    fontSize: 48,
+    fontSize: 42,
     fontWeight: 'bold',
-    lineHeight: 52,
+    lineHeight: 46,
   },
   bestStreakNumber: {
     color: '#333333',
-    fontSize: 48,
+    fontSize: 42,
     fontWeight: 'bold',
-    lineHeight: 52,
+    lineHeight: 46,
   },
   currentStreakDays: {
     color: 'rgba(255,255,255,0.7)',
-    fontSize: 14,
+    fontSize: 13,
   },
   bestStreakDays: {
     color: '#999',
-    fontSize: 14,
+    fontSize: 13,
   },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
+    borderRadius: 24,
+    padding: 16,
+    marginBottom: 14,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
   },
   cardHeader: {
-    fontSize: 18,
+    fontSize: 16,
     color: '#333',
     fontWeight: 'bold',
-    marginBottom: 20,
+    marginBottom: 12,
   },
   ticksContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 0,
   },
   tickCol: {
     alignItems: 'center',
@@ -375,12 +380,12 @@ const styles = StyleSheet.create({
   tickLabel: {
     color: '#8E8E8E',
     fontSize: 12,
-    marginBottom: 8,
+    marginBottom: 4,
   },
   tickCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -392,44 +397,32 @@ const styles = StyleSheet.create({
   },
   tickCheck: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 'bold',
   },
   tickClock: {
     color: '#D0D0D0',
-    fontSize: 16,
-  },
-  motivationalBox: {
-    backgroundColor: '#FFF8F0',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-  },
-  motivationalText: {
-    color: '#FF6B35',
-    fontWeight: '600',
     fontSize: 14,
   },
   calendarHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 12,
   },
   navButton: {
-    padding: 8,
-    backgroundColor: '#e7e3e3ff',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    backgroundColor: '#F0EBE5',
     borderRadius: 8,
   },
   navButtonText: {
-    fontSize: 20,
+    fontSize: 16,
     color: '#333',
     fontWeight: 'bold',
-    marginHorizontal: 6
   },
   calendarTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
   },
@@ -440,7 +433,7 @@ const styles = StyleSheet.create({
   calHeaderCell: {
     width: '14.28%',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 6,
   },
   calHeaderText: {
     color: '#999',
@@ -449,15 +442,15 @@ const styles = StyleSheet.create({
   },
   calDayCell: {
     width: '14.28%',
-    height: 40,
+    height: 38,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 10,
+    marginBottom: 4,
   },
   calDayCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -471,5 +464,22 @@ const styles = StyleSheet.create({
   calDayTextActive: {
     color: '#FFFFFF',
     fontWeight: 'bold',
-  }
+  },
+  motivationalBox: {
+    backgroundColor: '#FFF2E6',
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 14,
+    borderWidth: 1,
+    borderColor: '#FFE6D3',
+  },
+  motivationalText: {
+    color: '#FF6B35',
+    fontWeight: '600',
+    fontSize: 13,
+    textAlign: 'center',
+  },
 });

@@ -1,37 +1,57 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, SafeAreaView, Modal, FlatList } from 'react-native';
-import Svg, { Circle } from 'react-native-svg';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, SafeAreaView, Modal, FlatList, StatusBar, ScrollView } from 'react-native';
+import Svg, { Circle, Path, Line, Rect, Polyline } from 'react-native-svg';
+import * as Haptics from 'expo-haptics';
 import { useStore } from '../store/useStore';
 import { apiCall, syncOfflineCounter } from '../api/client';
 import NetInfo from '@react-native-community/netinfo';
 
 const GODS_LIST = [
   { id: '1', name: 'राधा' },
-  { id: '2', name: 'RADHA' },
-  { id: '3', name: 'RAM' },
-  { id: '4', name: 'राम' },
-  { id: '5', name: 'MAHADEV' },
-  { id: '6', name: 'महादेव' },
-  { id: '7', name: 'Om Krishnaya Vasudevaya Haraye Paramatmane Pranata: Kleshanashaya Govindaya Namo Namah' },
-  { id: '8', name: 'ॐ कृष्णाय वासुदेवाय हरये परमात्मने । प्रणतः क्लेशनाशाय गोविंदाय नमो नमः ॥' },
-  { id: '9', name: 'Om Namah Shivaya' },
-  { id: '10', name: 'ॐ नमः शिवाय' },
-  { id: '11', name: 'Om Gan Ganapataye Namaha' },
-  { id: '12', name: 'ॐ गं गणपतये नमः' },
-  { id: '13', name: 'Hare Krishna Hare Krishna Krishna Krishna Hare Hare, Hare Rama Hare Rama Rama Rama Hare Hare' },
-  { id: '14', name: 'हरे कृष्ण हरे कृष्ण कृष्ण कृष्ण हरे हरे, हरे राम हरे राम राम राम हरे हरे' },
-  { id: '15', name: 'ॐ भूर्भुवः स्वः तत्सवितुर्वरेण्यं भर्गो देवस्य धीमहि धियो यो नः प्रचोदयात्' },
-  { id: '16', name: 'ॐ त्र्यम्बकं यजामहे सुगन्धिं पुष्टिवर्धनम् उर्वारुकमिव बन्धनान्मृत्योर्मुक्षीय मामृतात्' },
-  { id: '17', name: 'KRISHNA' },
-  { id: '18', name: 'SHIV' },
-  { id: '19', name: 'NARAYAN' }
+  { id: '2', name: 'श्री शिवाय नमस्तुभ्यम्' },
+  { id: '3', name: 'राम' },
+  { id: '4', name: 'महादेव' },
+  { id: '5', name: 'ॐ नमः शिवाय' },
+  { id: '6', name: 'ॐ गं गणपतये नमः' },
+  { id: '7', name: 'ॐ कृष्णाय वासुदेवाय हरये परमात्मने । प्रणतः क्लेशनाशाय गोविंदाय नमो नमः ॥' },
+  { id: '8', name: 'हरे कृष्ण हरे कृष्ण कृष्ण कृष्ण हरे हरे, हरे राम हरे राम राम राम हरे हरे' },
+  { id: '9', name: 'ॐ भूर्भुवः स्वः तत्सवितुर्वरेण्यं भर्गो देवस्य धीमहि धियो यो नः प्रचोदयात्' },
+  { id: '10', name: 'ॐ त्र्यम्बकं यजामहे सुगन्धिं पुष्टिवर्धनम् उर्वारुकमिव बन्धनान्मृत्योर्मुक्षीय मामृतात्' },
+  { id: '11', name: 'RADHA' },
+  { id: '12', name: 'MAHADEV' },
+  { id: '13', name: 'KRISHNA' },
+  { id: '14', name: 'SHIV' },
+  { id: '15', name: 'NARAYAN' },
+  { id: '16', name: 'Om Namah Shivaya' },
+  { id: '17', name: 'Om Gan Ganapataye Namaha' },
+  { id: '18', name: 'Om Krishnaya Vasudevaya Haraye Paramatmane Pranata: Kleshanashaya Govindaya Namo Namah' },
+  { id: '19', name: 'Hare Krishna Hare Krishna Krishna Krishna Hare Hare, Hare Rama Hare Rama Rama Rama Hare Hare' }
 ]
 
 export default function DashboardScreen({ onStartChanting, onPressStreak }) {
-  const { userToken, currentNaam, totalCount, todayCount, sessionCount, logout, dailyGoal, setStats, setNaam } = useStore();
+  const { userToken, currentNaam, totalCount, todayCount, sessionCount, logout, dailyGoal, setStats, setNaam, incrementTap } = useStore();
   const [loading, setLoading] = useState(false);
   const [synced, setSynced] = useState(true);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isBlackoutMode, setIsBlackoutMode] = useState(false);
+  const [isMenuVisible, setIsMenuVisible] = useState(false);
+  const [isNaamHidden, setIsNaamHidden] = useState(false);
+  const [isTimerModalVisible, setIsTimerModalVisible] = useState(false);
+
+  const handleBlackoutTap = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    incrementTap();
+
+    const state = useStore.getState();
+    if (state.unsyncedTaps >= 108 && !state.isSyncing) {
+      syncOfflineCounter();
+    }
+  };
+
+  const handleExitBlackout = () => {
+    syncOfflineCounter();
+    setIsBlackoutMode(false);
+  };
 
   const handleSelectNaam = (god) => {
     setNaam({ name: god.name });
@@ -133,16 +153,44 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
     cDateStr = checkDate.toISOString().split('T')[0];
   }
 
+  if (isBlackoutMode) {
+    return (
+      <View style={styles.blackoutContainer}>
+        <StatusBar hidden />
+        
+        {/* Full screen tap area for chanting */}
+        <TouchableOpacity 
+          style={styles.blackoutTapArea} 
+          activeOpacity={1} 
+          onPress={handleBlackoutTap}
+        />
+
+        {/* Floating Back Button top left */}
+        <TouchableOpacity style={styles.blackoutBackButton} onPress={handleExitBlackout}>
+          <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <Path d="M9 14L4 9l5-5" />
+            <Path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11" />
+          </Svg>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Naam Jaap</Text>
-        <TouchableOpacity style={styles.streakBadgeWrapper} onPress={onPressStreak}>
-          <View style={styles.streakCircle}>
-            <Text style={styles.streakCircleText}>{currentStreak}</Text>
-          </View>
-          <Text style={styles.streakFlame}>🔥</Text>
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <TouchableOpacity style={styles.streakBadgeWrapper} onPress={onPressStreak}>
+            <View style={styles.streakCircle}>
+              <Text style={styles.streakCircleText}>{currentStreak}</Text>
+            </View>
+            <Text style={styles.streakFlame}>🔥</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.menuButton} onPress={() => setIsMenuVisible(true)}>
+            <Text style={styles.menuIcon}>☰</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {!synced && (
@@ -161,9 +209,10 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
           style={[
             styles.chantingName, 
             { 
-              fontSize: (currentNaam?.name || 'Krishna').length > 40 ? 18 : (currentNaam?.name || 'Krishna').length > 15 ? 25 : 50,
+              fontSize: (currentNaam?.name || 'Krishna').length > 40 ? 18 : (currentNaam?.name || 'Krishna').length > 15 ? 25 : 70,
               textAlign: 'center',
-              paddingHorizontal: 20
+              paddingHorizontal: 20,
+              opacity: isNaamHidden ? 0 : 1
             }
           ]}
           numberOfLines={4}
@@ -171,7 +220,7 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
         >
           {currentNaam?.name || 'Krishna'}
         </Text>
-        <TouchableOpacity onPress={() => setIsModalVisible(true)}>
+        <TouchableOpacity onPress={() => setIsModalVisible(true)} disabled={isNaamHidden} style={{ opacity: isNaamHidden ? 0 : 1 }}>
           <Text style={styles.changeNameText}>Change Name</Text>
         </TouchableOpacity>
       </View>
@@ -254,6 +303,179 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
           </View>
         </View>
       </Modal>
+
+      {/* Menu Modal */}
+      <Modal
+        visible={isMenuVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setIsMenuVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { height: '33%' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Options</Text>
+              <TouchableOpacity onPress={() => setIsMenuVisible(false)}>
+                <Text style={styles.closeModalText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {/* Hide/Show Naam */}
+            <TouchableOpacity 
+              style={styles.menuOptionItem} 
+              onPress={() => {
+                setIsNaamHidden(!isNaamHidden);
+                setIsMenuVisible(false);
+              }}
+            >
+              <View style={styles.menuIconContainer}>
+                {isNaamHidden ? (
+                  <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#333333" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <Path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <Circle cx="12" cy="12" r="3" />
+                  </Svg>
+                ) : (
+                  <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#333333" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <Path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                    <Line x1="1" y1="1" x2="23" y2="23" />
+                  </Svg>
+                )}
+              </View>
+              <View style={styles.menuOptionTextContainer}>
+                <Text style={styles.menuOptionTitle}>{isNaamHidden ? 'Show Naam' : 'Hide Naam'}</Text>
+              </View>
+            </TouchableOpacity>
+
+            {/* Set Timer */}
+            <TouchableOpacity 
+              style={styles.menuOptionItem} 
+              onPress={() => {
+                setIsMenuVisible(false);
+                setIsTimerModalVisible(true);
+              }}
+            >
+              <View style={styles.menuIconContainer}>
+                <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#333333" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <Circle cx="12" cy="12" r="10" />
+                  <Polyline points="12 6 12 12 16 14" />
+                </Svg>
+              </View>
+              <View style={styles.menuOptionTextContainer}>
+                <Text style={styles.menuOptionTitle}>Set Timer</Text>
+              </View>
+            </TouchableOpacity>
+
+            {/* Blackout Mode */}
+            <TouchableOpacity 
+              style={styles.menuOptionItem} 
+              onPress={() => {
+                setIsMenuVisible(false);
+                setIsBlackoutMode(true);
+              }}
+            >
+              <View style={styles.menuIconContainer}>
+                <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#333333" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <Circle cx="12" cy="12" r="10" fill="#333333" />
+                </Svg>
+              </View>
+              <View style={styles.menuOptionTextContainer}>
+                <Text style={styles.menuOptionTitle}>Blackout Mode</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Timer Selection Modal */}
+      <Modal
+        visible={isTimerModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setIsTimerModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { height: '45%' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Set Chanting Timer</Text>
+              <TouchableOpacity onPress={() => setIsTimerModalVisible(false)}>
+                <Text style={styles.closeModalText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+              <TouchableOpacity 
+                style={styles.menuOptionItem} 
+                onPress={() => {
+                  setIsTimerModalVisible(false);
+                  onStartChanting(0); // 0 means no timer
+                }}
+              >
+                <Text style={[styles.menuOptionTitle, { color: '#FF6B35' }]}>No Timer (Chant Indefinitely)</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.menuOptionItem} 
+                onPress={() => {
+                  setIsTimerModalVisible(false);
+                  onStartChanting(60); // 1 minute
+                }}
+              >
+                <Text style={styles.menuOptionTitle}>1 Minute</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.menuOptionItem} 
+                onPress={() => {
+                  setIsTimerModalVisible(false);
+                  onStartChanting(300); // 5 minutes
+                }}
+              >
+                <Text style={styles.menuOptionTitle}>5 Minutes</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.menuOptionItem} 
+                onPress={() => {
+                  setIsTimerModalVisible(false);
+                  onStartChanting(600); // 10 minutes
+                }}
+              >
+                <Text style={styles.menuOptionTitle}>10 Minutes</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.menuOptionItem} 
+                onPress={() => {
+                  setIsTimerModalVisible(false);
+                  onStartChanting(900); // 15 minutes
+                }}
+              >
+                <Text style={styles.menuOptionTitle}>15 Minutes</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.menuOptionItem} 
+                onPress={() => {
+                  setIsTimerModalVisible(false);
+                  onStartChanting(1200); // 20 minutes
+                }}
+              >
+                <Text style={styles.menuOptionTitle}>20 Minutes</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.menuOptionItem} 
+                onPress={() => {
+                  setIsTimerModalVisible(false);
+                  onStartChanting(1800); // 30 minutes
+                }}
+              >
+                <Text style={styles.menuOptionTitle}>30 Minutes</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -261,7 +483,7 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF8F0', // Beautiful off-white peach
+    backgroundColor: '#FFFDF9', // Beautiful off-white peach
   },
   header: {
     flexDirection: 'row',
@@ -271,6 +493,46 @@ const styles = StyleSheet.create({
     paddingTop: 40,
     marginBottom: 10,
     marginTop: 10,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  menuButton: {
+    marginLeft: 5,
+    // padding: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  menuIcon: {
+    fontSize: 20,
+    color: '#FF6B35',
+    fontWeight: 'bold',
+  },
+  blackoutContainer: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
+  blackoutTapArea: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  blackoutBackButton: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
   },
   headerTitle: {
     fontSize: 28,
@@ -285,9 +547,9 @@ const styles = StyleSheet.create({
   },
   streakCircle: {
     backgroundColor: '#D95F2B', // Darker orange as per screenshot for the circle
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 6,
@@ -298,7 +560,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   streakFlame: {
-    fontSize: 18,
+    fontSize: 16,
   },
   tapArea: {
     flex: 1,
@@ -316,21 +578,21 @@ const styles = StyleSheet.create({
   },
   chantingName: {
     color: '#FF6B35',
-    fontSize: 60,
-    fontWeight: '900',
+    // fontSize: 60,
+    fontWeight: '800',
     marginBottom: 8,
   },
   changeNameText: {
-    color: '#FF6B35',
+    color: '#fc8f67ff',
     fontSize: 14,
     opacity: 0.8,
-    textDecorationLine: 'underline',
+    // textDecorationLine: 'underline',
   },
   circleOuter: {
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: '#FFF8F0',
+    width: 24,
+    height: 24,
+    borderRadius: 14,
+    backgroundColor: '#FFFDF9',
     borderWidth: 20,
     borderColor: '#FFE6D3',
     alignItems: 'center',
@@ -370,7 +632,7 @@ const styles = StyleSheet.create({
   statsCard: {
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 24,
     paddingVertical: 24,
     alignItems: 'center',
     shadowColor: '#000',
@@ -437,12 +699,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 16,
     paddingHorizontal: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     marginBottom: 8,
     backgroundColor: '#FFFFFF',
   },
   godItemSelected: {
-    backgroundColor: '#FFF8F0',
+    backgroundColor: '#FFF2E6',
   },
   godTextContainer: {
     flex: 1,
@@ -472,5 +734,26 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: 'bold',
+  },
+  menuOptionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+  },
+  menuIconContainer: {
+    marginRight: 16,
+    width: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuOptionTextContainer: {
+    flex: 1,
+  },
+  menuOptionTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333333',
   },
 });

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, StatusBar, TouchableOpacity, Text, SafeAreaView, AppState } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useStore } from './src/store/useStore';
 import { syncOfflineCounter } from './src/api/client';
 import AuthScreen from './src/screens/AuthScreen';
@@ -13,19 +14,35 @@ function BottomTabBar({ activeTab, onTabSelect }) {
   return (
     <View style={styles.tabContainer}>
       <TouchableOpacity style={styles.tabItem} onPress={() => onTabSelect('home')}>
-        <Text style={[styles.tabIcon, activeTab === 'home' && styles.tabIconActive]}>🧘</Text>
+        <Ionicons 
+          name={activeTab === 'home' ? 'home' : 'home-outline'} 
+          size={24} 
+          color={activeTab === 'home' ? '#FF6B35' : '#B0B0B0'} 
+        />
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.tabItem} onPress={() => onTabSelect('chart')}>
-        <Text style={[styles.tabIcon, activeTab === 'chart' && styles.tabIconActive]}>📊</Text>
+        <Ionicons 
+          name={activeTab === 'chart' ? 'stats-chart' : 'stats-chart-outline'} 
+          size={24} 
+          color={activeTab === 'chart' ? '#FF6B35' : '#B0B0B0'} 
+        />
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.tabItem} onPress={() => onTabSelect('book')}>
-        <Text style={[styles.tabIcon, activeTab === 'book' && styles.tabIconActive]}>📖</Text>
+        <Ionicons 
+          name={activeTab === 'book' ? 'book' : 'book-outline'} 
+          size={24} 
+          color={activeTab === 'book' ? '#FF6B35' : '#B0B0B0'} 
+        />
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.tabItem} onPress={() => onTabSelect('settings')}>
-        <Text style={[styles.tabIcon, activeTab === 'settings' && styles.tabIconActive]}>⚙️</Text>
+        <Ionicons 
+          name={activeTab === 'settings' ? 'settings' : 'settings-outline'} 
+          size={24} 
+          color={activeTab === 'settings' ? '#FF6B35' : '#B0B0B0'} 
+        />
       </TouchableOpacity>
     </View>
   );
@@ -34,6 +51,7 @@ function BottomTabBar({ activeTab, onTabSelect }) {
 export default function App() {
   const [isChanting, setIsChanting] = useState(false);
   const [activeTab, setActiveTab] = useState('home');
+  const [chantingTimer, setChantingTimer] = useState(0);
   const userToken = useStore((state) => state.userToken);
   const appState = useRef(AppState.currentState);
 
@@ -67,7 +85,7 @@ export default function App() {
   // Very lean conditional rendering approach as requested
   if (!userToken) {
     return (
-      <View style={[styles.container, { backgroundColor: '#FFF8F0' }]}>
+      <View style={[styles.container, { backgroundColor: '#FFFDF9' }]}>
         <StatusBar barStyle="dark-content" />
         <AuthScreen />
       </View>
@@ -78,25 +96,28 @@ export default function App() {
     return (
       <View style={[styles.container, { backgroundColor: '#000000' }]}>
         <StatusBar hidden />
-        <CounterScreen onExit={() => setIsChanting(false)} />
+        <CounterScreen initialTimerSeconds={chantingTimer} onExit={() => setIsChanting(false)} />
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: '#FFF8F0' }]}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFF8F0" />
+    <View style={[styles.container, { backgroundColor: '#FFFDF9' }]}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFDF9" />
 
       {activeTab === 'home' && (
         <DashboardScreen
-          onStartChanting={() => setIsChanting(true)}
+          onStartChanting={(timerSecs = 0) => {
+            setChantingTimer(timerSecs);
+            setIsChanting(true);
+          }}
           onPressStreak={() => setActiveTab('streak')}
         />
       )}
       {activeTab === 'streak' && <StreakScreen onExit={() => setActiveTab('home')} />}
       {activeTab === 'chart' && <ProgressScreen />}
       {activeTab === 'book' && (
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#FFF8F0' }}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFDF9' }}>
           <View style={{ paddingHorizontal: 24, paddingTop: 40, marginBottom: 10, marginTop: 10 }}>
             <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#FF6B35' }}>Stories</Text>
           </View>

@@ -87,7 +87,7 @@ export default function AuthScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF8F0', // Beautiful off-white peach
+    backgroundColor: '#FFFDF9', // Beautiful off-white peach
     padding: 24,
     justifyContent: 'center',
   },
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: '#FFFFFF',
     color: '#333333',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
     fontSize: 16,
     marginBottom: 24,
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
   button: {
     backgroundColor: '#FF6B35',
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     alignItems: 'center',
     marginTop: 8,
     shadowColor: '#FF6B35',

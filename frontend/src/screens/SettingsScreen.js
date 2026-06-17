@@ -239,7 +239,7 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF8F0', // Beautiful off-white peach background
+    backgroundColor: '#FFFDF9', // Beautiful off-white peach background
   },
   header: {
     paddingHorizontal: 24,
@@ -357,7 +357,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 24,
     padding: 24,
     width: '80%',
     alignItems: 'center',
@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
     width: '100%',
     borderWidth: 1,
     borderColor: '#E0D6CB',
-    borderRadius: 8,
+    borderRadius: 16,
     padding: 12,
     fontSize: 16,
     textAlign: 'center',
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: 'center',
     marginRight: 8,
-    borderRadius: 8,
+    borderRadius: 16,
     backgroundColor: '#F0F0F0',
   },
   modalBtnSave: {
@@ -396,7 +396,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: 'center',
     marginLeft: 8,
-    borderRadius: 8,
+    borderRadius: 16,
     backgroundColor: '#FF6B35',
   },
   modalBtnCancelText: {

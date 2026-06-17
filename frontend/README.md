@@ -18,7 +18,7 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npx expo start --lan -c
    open cmd 
    ipconfig
-   find ip v4 address 
+   find ipv4 address 
    replace in api file 
    and connect laptop and mobile with same network 
    
