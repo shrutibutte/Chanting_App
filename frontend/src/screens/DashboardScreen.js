@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, SafeAreaView, Modal, FlatList, StatusBar, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, SafeAreaView, Modal, FlatList, StatusBar, ScrollView, TextInput, Alert } from 'react-native';
 import Svg, { Circle, Path, Line, Rect, Polyline } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { useStore } from '../store/useStore';
@@ -29,7 +29,7 @@ const GODS_LIST = [
 ]
 
 export default function DashboardScreen({ onStartChanting, onPressStreak }) {
-  const { userToken, currentNaam, totalCount, todayCount, sessionCount, logout, dailyGoal, setStats, setNaam, incrementTap } = useStore();
+  const { userToken, currentNaam, totalCount, todayCount, sessionCount, logout, dailyGoal, setStats, setNaam, incrementTap, addManualCount } = useStore();
   const [loading, setLoading] = useState(false);
   const [synced, setSynced] = useState(true);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -37,6 +37,8 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const [isNaamHidden, setIsNaamHidden] = useState(false);
   const [isTimerModalVisible, setIsTimerModalVisible] = useState(false);
+  const [isLogMalaModalVisible, setIsLogMalaModalVisible] = useState(false);
+  const [customCountInput, setCustomCountInput] = useState('');
 
   const handleBlackoutTap = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -312,13 +314,39 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
         onRequestClose={() => setIsMenuVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { height: '33%' }]}>
+          <View style={[styles.modalContent, { height: '42%' }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Options</Text>
               <TouchableOpacity onPress={() => setIsMenuVisible(false)}>
                 <Text style={styles.closeModalText}>✕</Text>
               </TouchableOpacity>
             </View>
+            
+            {/* Log Physical Mala */}
+            <TouchableOpacity 
+              style={styles.menuOptionItem} 
+              onPress={() => {
+                setIsMenuVisible(false);
+                setIsLogMalaModalVisible(true);
+              }}
+            >
+              <View style={styles.menuIconContainer}>
+                <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF6B35" strokeWidth="2.2">
+                  <Circle cx="12" cy="5" r="2" />
+                  <Circle cx="16.5" cy="7" r="2" />
+                  <Circle cx="19" cy="11.5" r="2" />
+                  <Circle cx="17.5" cy="16.5" r="2" />
+                  <Circle cx="13" cy="19.5" r="2" />
+                  <Circle cx="8" cy="19.5" r="2" />
+                  <Circle cx="4.5" cy="15.5" r="2" />
+                  <Circle cx="5" cy="10.5" r="2" />
+                  <Circle cx="7.5" cy="6.5" r="2" />
+                </Svg>
+              </View>
+              <View style={styles.menuOptionTextContainer}>
+                <Text style={styles.menuOptionTitle}>Add Count</Text>
+              </View>
+            </TouchableOpacity>
             
             {/* Hide/Show Naam */}
             <TouchableOpacity 
@@ -382,6 +410,109 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
                 <Text style={styles.menuOptionTitle}>Blackout Mode</Text>
               </View>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Log Physical Mala Modal */}
+      <Modal
+        visible={isLogMalaModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setIsLogMalaModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { height: '55%' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add Log Count</Text>
+              <TouchableOpacity onPress={() => setIsLogMalaModalVisible(false)}>
+                <Text style={styles.closeModalText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+              {/* <Text style={styles.modalInstruction}>Select number of rounds (Malas of 108 beads) or enter custom count below:</Text> */}
+              
+              <View style={styles.quickMalaContainer}>
+                <TouchableOpacity 
+                  style={styles.quickMalaBtn}
+                  onPress={() => {
+                    addManualCount(108);
+                    setIsLogMalaModalVisible(false);
+                    setTimeout(() => syncOfflineCounter(), 500);
+                  }}
+                >
+                  <Text style={styles.quickMalaBtnText}>+1 Mala</Text>
+                  <Text style={styles.quickMalaBtnSub}>108 counts</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={styles.quickMalaBtn}
+                  onPress={() => {
+                    addManualCount(216);
+                    setIsLogMalaModalVisible(false);
+                    setTimeout(() => syncOfflineCounter(), 500);
+                  }}
+                >
+                  <Text style={styles.quickMalaBtnText}>+2 Malas</Text>
+                  <Text style={styles.quickMalaBtnSub}>216 counts</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.quickMalaContainer}>
+                <TouchableOpacity 
+                  style={styles.quickMalaBtn}
+                  onPress={() => {
+                    addManualCount(432);
+                    setIsLogMalaModalVisible(false);
+                    setTimeout(() => syncOfflineCounter(), 500);
+                  }}
+                >
+                  <Text style={styles.quickMalaBtnText}>+4 Malas</Text>
+                  <Text style={styles.quickMalaBtnSub}>432 counts</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={styles.quickMalaBtn}
+                  onPress={() => {
+                    addManualCount(864);
+                    setIsLogMalaModalVisible(false);
+                    setTimeout(() => syncOfflineCounter(), 500);
+                  }}
+                >
+                  <Text style={styles.quickMalaBtnText}>+8 Malas</Text>
+                  <Text style={styles.quickMalaBtnSub}>864 counts</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.customCountContainer}>
+                <Text style={styles.customCountLabel}>Or enter custom counts:</Text>
+                <TextInput
+                  style={styles.customCountInput}
+                  value={customCountInput}
+                  onChangeText={setCustomCountInput}
+                  keyboardType="numeric"
+                  placeholder="e.g. 50 or 108"
+                />
+              </View>
+
+              <TouchableOpacity 
+                style={styles.submitCountBtn}
+                onPress={() => {
+                  const count = parseInt(customCountInput, 10);
+                  if (!isNaN(count) && count > 0) {
+                    addManualCount(count);
+                    setCustomCountInput('');
+                    setIsLogMalaModalVisible(false);
+                    setTimeout(() => syncOfflineCounter(), 500);
+                  } else {
+                    Alert.alert('Invalid Count', 'Please enter a valid number of counts greater than 0.');
+                  }
+                }}
+              >
+                <Text style={styles.submitCountBtnText}>Add Count</Text>
+              </TouchableOpacity>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -755,5 +886,75 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     color: '#333333',
+  },
+  modalInstruction: {
+    fontSize: 14,
+    color: '#8E8E8E',
+    marginBottom: 20,
+    lineHeight: 20,
+    paddingHorizontal: 4,
+  },
+  quickMalaContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  quickMalaBtn: {
+    flex: 1,
+    backgroundColor: '#FFF2E6',
+    borderWidth: 1,
+    borderColor: '#FFE6D3',
+    borderRadius: 16,
+    paddingVertical: 14,
+    marginHorizontal: 4,
+    alignItems: 'center',
+  },
+  quickMalaBtnText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FF6B35',
+    marginBottom: 2,
+  },
+  quickMalaBtnSub: {
+    fontSize: 11,
+    color: '#A89E94',
+  },
+  customCountContainer: {
+    marginTop: 16,
+    marginBottom: 20,
+    paddingHorizontal: 4,
+  },
+  customCountLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333333',
+    marginBottom: 8,
+  },
+  customCountInput: {
+    borderWidth: 1,
+    borderColor: '#FFE6D3',
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    color: '#333333',
+    backgroundColor: '#FFFFFF',
+  },
+  submitCountBtn: {
+    backgroundColor: '#FF6B35',
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginHorizontal: 4,
+    shadowColor: '#FF6B35',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  submitCountBtnText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });

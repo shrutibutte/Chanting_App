@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useStore } from '../store/useStore';
-import { BarChart } from 'react-native-chart-kit';
+import { LineChart } from 'react-native-chart-kit';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -12,10 +12,12 @@ export default function ProgressScreen() {
   const [offset, setOffset] = useState(0);
   const [activeView, setActiveView] = useState('chart'); // 'chart', 'history'
   const [selectedIdx, setSelectedIdx] = useState(null);
+  const [selectedPoint, setSelectedPoint] = useState(null);
 
   useEffect(() => {
     setSelectedIdx(null);
-  }, [timeRange, offset]);
+    setSelectedPoint(null);
+  }, [timeRange, offset])
 
   const { labels, dataPoints, dateRangeText, totalCount, dailyAverage, highestDaily, listItems } = useMemo(() => {
     const groupedByDate = {};
@@ -282,8 +284,8 @@ export default function ProgressScreen() {
                 <Text style={styles.noDataSubtext}>Begin your spiritual journey on the home tab. 🙏</Text>
               </View>
             ) : (
-              <View style={{ alignItems: 'center', width: '100%' }}>
-                <BarChart
+              <View style={{ alignItems: 'center', width: '100%', position: 'relative' }}>
+                <LineChart
                   data={{
                     labels: labels,
                     datasets: [{
@@ -295,9 +297,16 @@ export default function ProgressScreen() {
                   yAxisLabel=""
                   yAxisSuffix=""
                   fromZero={true}
-                  showBarTops={false}
+                  withInnerLines={false}
+                  bezier
                   onDataPointClick={(data) => {
                     setSelectedIdx(data.index);
+                    setSelectedPoint({
+                      x: data.x,
+                      y: data.y,
+                      value: data.value,
+                      index: data.index
+                    });
                   }}
                   chartConfig={{
                     backgroundColor: '#FFFFFF',
@@ -309,8 +318,13 @@ export default function ProgressScreen() {
                     style: {
                       borderRadius: 24
                     },
+                    propsForDots: {
+                      r: "4",
+                      strokeWidth: "2",
+                      stroke: "#FF6B35"
+                    },
                     fillShadowGradient: '#FF6B35',
-                    fillShadowGradientOpacity: 1,
+                    fillShadowGradientOpacity: 0.2,
                     propsForBackgroundLines: {
                       stroke: '#F4EFEA',
                       strokeDasharray: '4',
@@ -319,10 +333,35 @@ export default function ProgressScreen() {
                   }}
                   style={{
                     marginVertical: 8,
-                    // borderRadius: 24,
                     alignSelf: 'center'
                   }}
                 />
+                
+                {/* Tooltip Overlay */}
+                {selectedPoint && (
+                  <View 
+                    style={{
+                      position: 'absolute',
+                      left: selectedPoint.x, // Centers around the dot
+                      top: selectedPoint.y - 10,  // Show slightly above the dot
+                      backgroundColor: '#333333',
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderRadius: 8,
+                      transform: [{ translateX: -10 }, { translateY: -10 }],
+                      pointerEvents: 'none',
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.2,
+                      shadowRadius: 4,
+                      elevation: 4,
+                    }}
+                  >
+                    <Text style={{ color: '#FFFFFF', fontWeight: 'bold', fontSize: 14 }}>
+                      {selectedPoint.value}
+                    </Text>
+                  </View>
+                )}
                 <View style={styles.detailContainer}>
                   <Text style={styles.detailLabel}>{getSelectedLabel(activeIdx)}</Text>
                   <Text style={styles.detailText}>
@@ -669,7 +708,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     paddingVertical: 12,
     paddingHorizontal: 8,
-    marginBottom: 20,
+    marginBottom: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.04,

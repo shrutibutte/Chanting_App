@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, Switch, TouchableOpacity, Alert, ScrollView, Modal, TextInput } from 'react-native';
 import { useStore } from '../store/useStore';
 import { Ionicons, Feather, MaterialIcons } from '@expo/vector-icons';
+import { requestNotificationPermissions, scheduleDailyReminder, cancelAllReminders } from '../utils/notifications';
 
 export default function SettingsScreen() {
   const { 
@@ -28,13 +29,34 @@ export default function SettingsScreen() {
   const [isTimeModalVisible, setIsTimeModalVisible] = useState(false);
   const [tempTime, setTempTime] = useState('');
 
-  const handleToggleReminder = (enabled) => {
-    setReminderSettings(enabled, reminderTime);
+  const handleToggleReminder = async (enabled) => {
     if (enabled) {
-      Alert.alert(
-        'Reminder On', 
-        `Daily Reminder set to ${formatDisplayTime(localTime)}.`
-      );
+      const hasPermission = await requestNotificationPermissions();
+      if (!hasPermission) {
+        Alert.alert(
+          'Permission Required',
+          'Please enable notifications in your device settings to receive chanting reminders.'
+        );
+        return;
+      }
+
+      try {
+        await scheduleDailyReminder(reminderTime);
+        setReminderSettings(true, reminderTime);
+        Alert.alert(
+          'Reminder On', 
+          `Daily Reminder set to ${formatDisplayTime(localTime)}.`
+        );
+      } catch (err) {
+        Alert.alert('Error', 'Failed to schedule reminder. Please try again.');
+      }
+    } else {
+      try {
+        await cancelAllReminders();
+        setReminderSettings(false, reminderTime);
+      } catch (err) {
+        Alert.alert('Error', 'Failed to cancel reminder. Please try again.');
+      }
     }
   };
 
@@ -62,14 +84,23 @@ export default function SettingsScreen() {
     }
   };
 
-  const handleSaveTime = () => {
+  const handleSaveTime = async () => {
     const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
     if (timeRegex.test(tempTime)) {
-      setReminderSettings(isReminderEnabled, tempTime);
       const [hours, minutes] = tempTime.split(':');
       const d = new Date();
       d.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
       setLocalTime(d);
+
+      if (isReminderEnabled) {
+        try {
+          await scheduleDailyReminder(tempTime);
+        } catch (err) {
+          Alert.alert('Error', 'Failed to update reminder time. Please try again.');
+        }
+      }
+
+      setReminderSettings(isReminderEnabled, tempTime);
       setIsTimeModalVisible(false);
     } else {
       Alert.alert('Invalid Time', 'Please enter a valid time in 24-hour format (e.g. 08:30 or 15:00)');
@@ -88,7 +119,7 @@ export default function SettingsScreen() {
       >
         {/* JAAP SETTINGS */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>JAAP SETTINGS</Text>
+          {/* <Text style={styles.sectionTitle}>JAAP SETTINGS</Text> */}
           <TouchableOpacity 
             style={styles.cardRow} 
             activeOpacity={0.7} 

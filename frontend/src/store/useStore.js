@@ -19,13 +19,20 @@ export const useStore = create(
       setNaam: (naam) => set({ currentNaam: naam }),
 
       // Reminder Settings
-      isReminderEnabled: false,
+      isReminderEnabled: true,
       reminderTime: "08:00", // "HH:mm" format 24-hour style
       setReminderSettings: (enabled, time) => set({ isReminderEnabled: enabled, reminderTime: time }),
 
       // Daily Goal
       dailyGoal: 108,
       setDailyGoal: (goal) => set({ dailyGoal: goal }),
+
+      // Celebration and Streak Popup tracking
+      lastCelebrationDate: null,
+      lastStreakMaintainedPopupDate: null,
+      showCelebrationModal: false,
+      setShowCelebrationModal: (show) => set({ showCelebrationModal: show }),
+      setLastStreakMaintainedPopupDate: (date) => set({ lastStreakMaintainedPopupDate: date }),
 
       // Authentication
       login: (token, emailAddr) => set({ userToken: token, email: emailAddr }),
@@ -34,19 +41,56 @@ export const useStore = create(
       // Session logic
       resetSession: () => set({ sessionCount: 0 }),
 
+      // Manual logging logic
+      addManualCount: (countToAdd) => {
+        if (countToAdd <= 0) return;
+        const currentDate = new Date().toISOString().split('T')[0];
+        set((state) => {
+          const isNewDay = state.lastSyncDate !== currentDate;
+          const nextTodayCount = isNewDay ? countToAdd : state.todayCount + countToAdd;
+
+          let celebrationUpdates = {};
+          if (nextTodayCount >= state.dailyGoal && state.lastCelebrationDate !== currentDate) {
+            celebrationUpdates = {
+              showCelebrationModal: true,
+              lastCelebrationDate: currentDate
+            };
+          }
+
+          return {
+            totalCount: state.totalCount + countToAdd,
+            todayCount: nextTodayCount,
+            unsyncedTaps: state.unsyncedTaps + countToAdd,
+            lastSyncDate: currentDate,
+            ...celebrationUpdates
+          };
+        });
+      },
+
       // Chanting logic
       incrementTap: () => {
         const currentDate = new Date().toISOString().split('T')[0];
         set((state) => {
-          // If a new day started, we could optionally reset todayCount here, 
-          // For simplicity we will fetch it periodically, but let's increment local for instant feedback
+          // If a new day started, reset todayCount locally
           const isNewDay = state.lastSyncDate !== currentDate;
+          const nextTodayCount = isNewDay ? 1 : state.todayCount + 1;
+
+          let celebrationUpdates = {};
+          // If user crosses the daily goal today for the first time
+          if (nextTodayCount >= state.dailyGoal && state.lastCelebrationDate !== currentDate) {
+            celebrationUpdates = {
+              showCelebrationModal: true,
+              lastCelebrationDate: currentDate
+            };
+          }
+
           return {
             totalCount: state.totalCount + 1,
-            todayCount: isNewDay ? 1 : state.todayCount + 1,
+            todayCount: nextTodayCount,
             unsyncedTaps: state.unsyncedTaps + 1,
             sessionCount: state.sessionCount + 1,
             lastSyncDate: currentDate,
+            ...celebrationUpdates
           };
         });
       },
