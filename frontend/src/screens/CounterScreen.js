@@ -66,8 +66,8 @@ export default function CounterScreen({ initialTimerSeconds = 0, onExit }) {
     onExit();
   };
 
-  const currentMalaProgress = todayCount % 108;
-  const todayMalasCompleted = Math.floor(todayCount / 108);
+  const currentMalaProgress = todayCount === 0 ? 0 : (todayCount % 108 === 0 ? 108 : todayCount % 108);
+  const currentMalaNumber = todayCount === 0 ? 1 : Math.floor((todayCount - 1) / 108) + 1;
 
   const percentage = Math.floor((currentMalaProgress / 108) * 100);
   const size = 260;
@@ -99,7 +99,7 @@ export default function CounterScreen({ initialTimerSeconds = 0, onExit }) {
               </View>
             )}
             <View style={styles.malaBadge}>
-              <Text style={styles.malaBadgeText}>Mala {todayMalasCompleted + 1}</Text>
+              <Text style={styles.malaBadgeText}>Malas {Math.floor(todayCount / 108)}</Text>
             </View>
           </View>
         </View>
@@ -149,10 +149,17 @@ export default function CounterScreen({ initialTimerSeconds = 0, onExit }) {
         <View style={styles.statsCardWrapper}>
           <View style={styles.statsCard}>
             <View style={styles.statColumn}>
+              <Text style={styles.statNumber}>{Math.floor(todayCount / 108)}</Text>
+              <Text style={styles.statLabel}>Malas</Text>
+            </View>
+
+            <View style={styles.verticalDivider} />
+
+            <View style={styles.statColumn}>
               <Text style={styles.statNumber}>
-                {todayCount}/{dailyGoal || 108}
+                {todayCount}
               </Text>
-              <Text style={styles.statLabel}>Current</Text>
+              <Text style={styles.statLabel}>Today</Text>
             </View>
 
             <View style={styles.verticalDivider} />

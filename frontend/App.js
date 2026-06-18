@@ -10,6 +10,7 @@ import CounterScreen from './src/screens/CounterScreen';
 import ProgressScreen from './src/screens/ProgressScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import StreakScreen from './src/screens/StreakScreen';
+import JourneyScreen from './src/screens/JourneyScreen';
 import { requestNotificationPermissions, scheduleDailyReminder, updateTargetReminder } from './src/utils/notifications';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -69,11 +70,11 @@ function BottomTabBar({ activeTab, onTabSelect }) {
         />
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.tabItem} onPress={() => onTabSelect('book')}>
+      <TouchableOpacity style={styles.tabItem} onPress={() => onTabSelect('journey')}>
         <Ionicons 
-          name={activeTab === 'book' ? 'book' : 'book-outline'} 
+          name={activeTab === 'journey' ? 'flower' : 'flower-outline'} 
           size={24} 
-          color={activeTab === 'book' ? '#FF6B35' : '#B0B0B0'} 
+          color={activeTab === 'journey' ? '#FF6B35' : '#B0B0B0'} 
         />
       </TouchableOpacity>
 
@@ -369,16 +370,7 @@ export default function App() {
       )}
       {activeTab === 'streak' && <StreakScreen onExit={() => setActiveTab('home')} />}
       {activeTab === 'chart' && <ProgressScreen />}
-      {activeTab === 'book' && (
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFDF9' }}>
-          <View style={{ paddingHorizontal: 24, paddingTop: 40, marginBottom: 10, marginTop: 10 }}>
-            <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#FF6B35' }}>Stories</Text>
-          </View>
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ color: '#FF6B35', fontSize: 20 }}>Audio Stories Coming Soon!</Text>
-          </View>
-        </SafeAreaView>
-      )}
+      {activeTab === 'journey' && <JourneyScreen />}
       {activeTab === 'settings' && <SettingsScreen />}
 
       <BottomTabBar activeTab={activeTab} onTabSelect={setActiveTab} />

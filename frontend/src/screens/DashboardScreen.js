@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, SafeAreaView, Modal, FlatList, StatusBar, ScrollView, TextInput, Alert } from 'react-native';
 import Svg, { Circle, Path, Line, Rect, Polyline } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
 import { useStore } from '../store/useStore';
 import { apiCall, syncOfflineCounter } from '../api/client';
 import NetInfo from '@react-native-community/netinfo';
@@ -29,7 +30,7 @@ const GODS_LIST = [
 ]
 
 export default function DashboardScreen({ onStartChanting, onPressStreak }) {
-  const { userToken, currentNaam, totalCount, todayCount, sessionCount, logout, dailyGoal, setStats, setNaam, incrementTap, addManualCount } = useStore();
+  const { userToken, currentNaam, totalCount, todayCount, sessionCount, logout, dailyGoal, setStats, setNaam, incrementTap, addManualCount, lastUnlockedLevel, showLevelModal, unlockedLevelInfo, setShowLevelModal } = useStore();
   const [loading, setLoading] = useState(false);
   const [synced, setSynced] = useState(true);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -122,7 +123,7 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
     return () => unsubscribe();
   }, []);
 
-  const currentMalaProgress = todayCount % 108;
+  const currentMalaProgress = todayCount === 0 ? 0 : (todayCount % 108 === 0 ? 108 : todayCount % 108);
   const percentage = Math.floor((currentMalaProgress / 108) * 100);
   const displayTotalMalas = Math.floor(todayCount / 108);
 
@@ -264,11 +265,22 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
           <View style={styles.verticalDivider} />
 
           <View style={styles.statColumn}>
-            <Text style={styles.statNumber}>
-              {todayCount}
-              <Text style={{fontSize: 14, color: '#A0A0A0'}}>{` / ${dailyGoal || 108}`}</Text>
-            </Text>
-            <Text style={styles.statLabel}>Today's Goal</Text>
+            {todayCount >= dailyGoal ? (
+              <>
+                <Text style={[styles.statNumber, { color: '#00BFA5' }]}>
+                  {todayCount}
+                </Text>
+                <Text style={[styles.statLabel, { color: '#00BFA5', fontWeight: 'bold' }]}>✅ Goal Met</Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.statNumber}>
+                  {todayCount}
+                  <Text style={{fontSize: 14, color: '#A0A0A0'}}>{` / ${dailyGoal || 108}`}</Text>
+                </Text>
+                <Text style={styles.statLabel}>Today's Goal</Text>
+              </>
+            )}
           </View>
 
           <View style={styles.verticalDivider} />
@@ -513,6 +525,42 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
                 <Text style={styles.submitCountBtnText}>Add Count</Text>
               </TouchableOpacity>
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Level-Up Celebration Modal */}
+      <Modal
+        visible={showLevelModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowLevelModal(false)}
+      >
+        <View style={styles.levelOverlay}>
+          <View style={styles.levelCard}>
+            <Text style={styles.levelTitleText}>🌟 LEVEL UNLOCKED! 🌟</Text>
+            
+            <View style={styles.levelCelebrationIconContainer}>
+              <Text style={styles.levelCelebrationIcon}>{unlockedLevelInfo?.icon || '🌱'}</Text>
+            </View>
+
+            <Text style={styles.levelCongratulationText}>
+              Congratulations! You have reached a new milestone in your spiritual journey.
+            </Text>
+
+            <View style={styles.levelHighlightBox}>
+              <Text style={styles.levelHighlightTitle}>NEW LEVEL</Text>
+              <Text style={styles.levelHighlightVal}>{unlockedLevelInfo?.name}</Text>
+              <Text style={styles.levelHighlightSub}>Unlocked at {unlockedLevelInfo?.target.toLocaleString()} Naam Jaap</Text>
+            </View>
+
+            <TouchableOpacity 
+              style={styles.continueJourneyButton} 
+              onPress={() => setShowLevelModal(false)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.continueJourneyButtonText}>Continue Journey</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
