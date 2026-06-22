@@ -26,6 +26,10 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "notification": {
+      "icon": "./assets/maharaj.jpg",
+      "color": "#FF6B35"
+    },
     "plugins": [
       "@react-native-community/datetimepicker"
     ],

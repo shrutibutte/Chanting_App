@@ -2,68 +2,119 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useStore, getLevelInfo, JOURNEY_LEVELS } from '../store/useStore';
+import { getTranslation } from '../utils/translations';
+
+function translateLevelName(name, language) {
+  if (!name) return '';
+  const match = name.match(/^(Ananda Master)\s+Lvl\s+(\d+)$/);
+  if (match) {
+    const base = getTranslation(language, 'level_AnandaMaster');
+    return `${base} Lvl ${match[2]}`;
+  }
+  const normalizedKey = 'level_' + name.replace(/\s+/g, '');
+  return getTranslation(language, normalizedKey);
+}
 
 export default function JourneyScreen() {
-  const { totalCount } = useStore();
+  const { totalCount, isDarkMode, language } = useStore();
   const levelInfo = getLevelInfo(totalCount);
   const [isLevelsListExpanded, setIsLevelsListExpanded] = useState(true);
 
+  const renderNextLevelText = () => {
+    const remainingText = levelInfo.remainingCount.toLocaleString();
+    const nextLevelTranslated = translateLevelName(levelInfo.nextLevelName, language);
+    
+    if (language === 'hi') {
+      return (
+        <Text style={[styles.nextLevelGoalText, isDarkMode && styles.darkNextLevelGoalText]}>
+          🌿 एक{' '}
+          <Text style={[{ fontWeight: 'bold', color: '#FF6B35' }, isDarkMode && { color: '#FFFFFF' }]}>
+            {nextLevelTranslated}
+          </Text>
+          {' '}बनने के लिए केवल{' '}
+          <Text style={[{ fontWeight: 'bold', color: '#FF6B35' }, isDarkMode && { color: '#FFFFFF' }]}>
+            {remainingText}
+          </Text>
+          {' '}और जाप की आवश्यकता है
+        </Text>
+      );
+    } else if (language === 'mr') {
+      return (
+        <Text style={[styles.nextLevelGoalText, isDarkMode && styles.darkNextLevelGoalText]}>
+          🌿 एक{' '}
+          <Text style={[{ fontWeight: 'bold', color: '#FF6B35' }, isDarkMode && { color: '#FFFFFF' }]}>
+            {nextLevelTranslated}
+          </Text>
+          {' '}बनण्यासाठी फक्त{' '}
+          <Text style={[{ fontWeight: 'bold', color: '#FF6B35' }, isDarkMode && { color: '#FFFFFF' }]}>
+            {remainingText}
+          </Text>
+          {' '}अधिक जाप करावे लागतील
+        </Text>
+      );
+    } else {
+      return (
+        <Text style={[styles.nextLevelGoalText, isDarkMode && styles.darkNextLevelGoalText]}>
+          🌿 Only{' '}
+          <Text style={[{ fontWeight: 'bold', color: '#FF6B35' }, isDarkMode && { color: '#FFFFFF' }]}>
+            {remainingText}
+          </Text>
+          {' '}more chants to become a{' '}
+          <Text style={[{ fontWeight: 'bold', color: '#FF6B35' }, isDarkMode && { color: '#FFFFFF' }]}>
+            {nextLevelTranslated}
+          </Text>
+        </Text>
+      );
+    }
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, isDarkMode && styles.darkContainer]}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Journey</Text>
+        <Text style={[styles.headerTitle, isDarkMode && styles.darkHeaderTitle]}>{getTranslation(language, 'journeyTitle')}</Text>
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        <View style={styles.journeyCard}>
-          <Text style={styles.journeySectionTitle}>SPIRITUAL JOURNEY PROGRESS</Text>
+        <View style={[styles.journeyCard, isDarkMode && styles.darkCardRow]}>
+          <Text style={[styles.journeySectionTitle, isDarkMode && styles.darkSectionTitle]}>{getTranslation(language, 'spiritualJourneyProgress')}</Text>
 
           <View style={styles.currentLevelHeader}>
-            <View style={styles.levelBadge}>
+            <View style={[styles.levelBadge, isDarkMode && styles.darkLevelBadge]}>
               <Text style={styles.levelBadgeIcon}>{levelInfo.icon}</Text>
-              <Text style={styles.levelBadgeText}>{levelInfo.name}</Text>
+              <Text style={[styles.levelBadgeText, isDarkMode && styles.darkLevelBadgeText]}>{translateLevelName(levelInfo.name, language)}</Text>
             </View>
-            <Text style={styles.levelProgressLabel}>
-              {totalCount.toLocaleString()} / {levelInfo.nextThreshold.toLocaleString()} Chants
+            <Text style={[styles.levelProgressLabel, isDarkMode && styles.darkLevelProgressLabel]}>
+              {totalCount.toLocaleString()} / {levelInfo.nextThreshold.toLocaleString()} {getTranslation(language, 'counts')}
             </Text>
           </View>
 
           {/* Progress Bar */}
-          <View style={styles.progressBarBg}>
-            <View style={[styles.progressBarFill, { width: `${levelInfo.progressPercentage}%` }]} />
+          <View style={[styles.progressBarBg, isDarkMode && styles.darkProgressBarBg]}>
+            <View style={[styles.progressBarFill, isDarkMode && styles.darkProgressBarFill, { width: `${levelInfo.progressPercentage}%` }]} />
           </View>
 
-          <Text style={styles.nextLevelGoalText}>
-            🌿 Only{' '}
-            <Text style={{ fontWeight: 'bold', color: '#FF6B35' }}>
-              {levelInfo.remainingCount.toLocaleString()}
-            </Text>
-            {' '}more chants to become a{' '}
-            <Text style={{ fontWeight: 'bold', color: '#FF6B35' }}>
-              {levelInfo.nextLevelName}
-            </Text>
-          </Text>
+          {renderNextLevelText()}
           {/* Collapsible/Expandable Journey Levels list */}
           <TouchableOpacity
-            style={styles.levelsListToggle}
+            style={[styles.levelsListToggle, isDarkMode && { borderTopColor: '#333333' }]}
             onPress={() => setIsLevelsListExpanded(!isLevelsListExpanded)}
             activeOpacity={0.7}
           >
-            <Text style={styles.levelsListToggleText}>
-              {isLevelsListExpanded ? 'Hide All Journey Levels' : 'View All Journey Levels'}
+            <Text style={[styles.levelsListToggleText, isDarkMode && styles.darkLevelsListToggleText]}>
+              {isLevelsListExpanded ? getTranslation(language, 'hideJourneyLevels') : getTranslation(language, 'viewJourneyLevels')}
             </Text>
             <Ionicons
               name={isLevelsListExpanded ? 'chevron-up' : 'chevron-down'}
               size={16}
-              color="#FF6B35"
+              color={isDarkMode ? '#FFFFFF' : '#FF6B35'}
             />
           </TouchableOpacity>
 
           {isLevelsListExpanded && (
-            <View style={styles.levelsListContainer}>
+            <View style={[styles.levelsListContainer, isDarkMode && { borderTopColor: '#333333' }]}>
               {JOURNEY_LEVELS.map((lvl, index) => {
                 const isCompleted = totalCount >= lvl.minCount;
                 const isCurrent = levelInfo.name.startsWith(lvl.name);
@@ -72,20 +123,30 @@ export default function JourneyScreen() {
                     key={lvl.name}
                     style={[
                       styles.journeyLevelItem,
-                      isCurrent && styles.journeyLevelItemActive,
+                      isCurrent && (isDarkMode ? styles.darkJourneyLevelItemActive : styles.journeyLevelItemActive),
                       !isCompleted && styles.journeyLevelItemLocked
                     ]}
                   >
                     <Text style={styles.journeyLevelIcon}>{lvl.icon}</Text>
                     <Text style={[
                       styles.journeyLevelName,
-                      isCompleted ? styles.journeyLevelNameCompleted : styles.journeyLevelNameLocked
+                      isCompleted ? (isDarkMode ? styles.darkJourneyLevelNameCompleted : styles.journeyLevelNameCompleted) : styles.journeyLevelNameLocked
                     ]}>
-                      {lvl.name} {isCurrent && " (Current)"}
+                      {translateLevelName(lvl.name, language)}{isCurrent && ` ${getTranslation(language, 'currentLabel')}`}
                     </Text>
-                    <Text style={styles.journeyLevelMinCount}>
-                      {isCurrent ? `${totalCount.toLocaleString()} Chants` : `${lvl.minCount.toLocaleString()} Chants`}
-                    </Text>
+                    {isCurrent ? (
+                      <Text style={[styles.journeyLevelMinCountActive, isDarkMode && styles.darkJourneyLevelMinCountActive]}>
+                        {getTranslation(language, 'current')}: {totalCount.toLocaleString()} {getTranslation(language, 'counts')}
+                      </Text>
+                    ) : isCompleted ? (
+                      <Text style={[styles.journeyLevelMinCountCompleted, isDarkMode && styles.darkJourneyLevelMinCountCompleted]}>
+                        {getTranslation(language, 'completedLabel')}
+                      </Text>
+                    ) : (
+                      <Text style={styles.journeyLevelMinCount}>
+                        {getTranslation(language, 'requiresChants', { minCount: lvl.minCount.toLocaleString() })}
+                      </Text>
+                    )}
                   </View>
                 );
               })}
@@ -239,5 +300,70 @@ const styles = StyleSheet.create({
   journeyLevelMinCount: {
     fontSize: 12,
     color: '#8E8E8E',
+  },
+  journeyLevelMinCountActive: {
+    fontSize: 12,
+    color: '#FF6B35',
+    fontWeight: '600',
+  },
+  journeyLevelMinCountCompleted: {
+    fontSize: 12,
+    color: '#00BFA5',
+    fontWeight: '600',
+  },
+  // Dark Mode Styles
+  darkContainer: {
+    backgroundColor: '#000000',
+  },
+  darkHeaderTitle: {
+    color: '#FFFFFF',
+  },
+  darkCardRow: {
+    backgroundColor: '#000000',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  darkSectionTitle: {
+    color: '#8E8E8E',
+  },
+  darkLevelBadge: {
+    backgroundColor: '#000000',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+  },
+  darkLevelBadgeText: {
+    color: '#FFFFFF',
+  },
+  darkLevelProgressLabel: {
+    color: '#CCCCCC',
+  },
+  darkProgressBarBg: {
+    backgroundColor: '#222222',
+  },
+  darkProgressBarFill: {
+    backgroundColor: '#FFFFFF',
+  },
+  darkNextLevelGoalText: {
+    color: '#CCCCCC',
+  },
+  darkLevelsListToggleText: {
+    color: '#FFFFFF',
+  },
+  darkJourneyLevelItemActive: {
+    backgroundColor: '#222222',
+  },
+  darkJourneyLevelNameCompleted: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  darkJourneyLevelMinCountActive: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  darkJourneyLevelMinCountCompleted: {
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
 });

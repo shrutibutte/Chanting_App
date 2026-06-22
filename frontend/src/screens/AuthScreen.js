@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { useStore } from '../store/useStore';
 import { apiCall } from '../api/client';
+import { getTranslation } from '../utils/translations';
 
 export default function AuthScreen() {
   const [email, setEmail] = useState('');
@@ -9,44 +10,52 @@ export default function AuthScreen() {
   const [isOtpSent, setIsOtpSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const setLogin = useStore((state) => state.login);
+  const isDarkMode = useStore((state) => state.isDarkMode);
+  const language = useStore((state) => state.language);
 
   const handleSendOtp = async () => {
-    if (!email.includes('@')) return Alert.alert('Invalid Email', 'Please enter a valid email address.');
+    if (!email.includes('@')) return Alert.alert(getTranslation(language, 'invalidEmail'), getTranslation(language, 'enterValidEmail'));
     setLoading(true);
     try {
       await apiCall('/auth/send-otp', 'POST', { email });
       setIsOtpSent(true);
-      Alert.alert('OTP Sent', 'Please check your email for the OTP.');
+      Alert.alert(getTranslation(language, 'otpSent'), getTranslation(language, 'checkEmailOtp'));
     } catch (error) {
-      Alert.alert('Error', error.message);
+      Alert.alert(getTranslation(language, 'error'), error.message);
     } finally {
       setLoading(false);
     }
   };
 
   const handleVerifyOtp = async () => {
-    if (otp.length < 6) return Alert.alert('Invalid OTP', 'Please enter the 6-digit OTP.');
+    if (otp.length < 6) return Alert.alert(getTranslation(language, 'invalidOtp'), getTranslation(language, 'enterSixDigitOtp'));
     setLoading(true);
     try {
       const data = await apiCall('/auth/verify-otp', 'POST', { email, otp });
       setLogin(data.token, data.user.email);
     } catch (error) {
-      Alert.alert('Error', error.message);
+      Alert.alert(getTranslation(language, 'error'), error.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Naam Jaap</Text>
-      <Text style={styles.subtitle}>Begin your spiritual journey</Text>
+    <View style={[styles.container, isDarkMode && styles.darkContainer]}>
+      <Text style={[styles.title, isDarkMode && styles.darkTitle]}>
+        {getTranslation(language, 'appName')}
+      </Text>
+      <Text style={[styles.subtitle, isDarkMode && styles.darkSubtitle]}>
+        {getTranslation(language, 'beginJourney')}
+      </Text>
 
-      <Text style={styles.label}>Email Address</Text>
+      <Text style={[styles.label, isDarkMode && styles.darkLabel]}>
+        {getTranslation(language, 'emailAddress')}
+      </Text>
       <TextInput
-        style={styles.input}
-        placeholder="Enter your email address"
-        placeholderTextColor="#666"
+        style={[styles.input, isDarkMode && styles.darkInput]}
+        placeholder={getTranslation(language, 'enterEmail')}
+        placeholderTextColor={isDarkMode ? "#666666" : "#8E8E8E"}
         keyboardType="email-address"
         autoCapitalize="none"
         value={email}
@@ -56,11 +65,13 @@ export default function AuthScreen() {
 
       {isOtpSent && (
         <>
-          <Text style={styles.label}>OTP</Text>
+          <Text style={[styles.label, isDarkMode && styles.darkLabel]}>
+            {getTranslation(language, 'otp')}
+          </Text>
           <TextInput
-            style={styles.input}
-            placeholder="Enter 6-digit OTP"
-            placeholderTextColor="#666"
+            style={[styles.input, isDarkMode && styles.darkInput]}
+            placeholder={getTranslation(language, 'enterOtp')}
+            placeholderTextColor={isDarkMode ? "#666666" : "#8E8E8E"}
             keyboardType="number-pad"
             value={otp}
             onChangeText={setOtp}
@@ -70,14 +81,16 @@ export default function AuthScreen() {
       )}
 
       <TouchableOpacity 
-        style={styles.button} 
+        style={[styles.button, isDarkMode && styles.darkButton]} 
         onPress={isOtpSent ? handleVerifyOtp : handleSendOtp}
         disabled={loading}
       >
         {loading ? (
-          <ActivityIndicator color="#000" />
+          <ActivityIndicator color={isDarkMode ? "#000000" : "#FFFFFF"} />
         ) : (
-          <Text style={styles.buttonText}>{isOtpSent ? "Verify & Login" : "Send OTP"}</Text>
+          <Text style={[styles.buttonText, isDarkMode && styles.darkButtonText]}>
+            {isOtpSent ? getTranslation(language, 'verifyLogin') : getTranslation(language, 'sendOtp')}
+          </Text>
         )}
       </TouchableOpacity>
     </View>
@@ -142,5 +155,33 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  // Dark Mode
+  darkContainer: {
+    backgroundColor: '#000000',
+  },
+  darkTitle: {
+    color: '#FFFFFF',
+  },
+  darkSubtitle: {
+    color: '#8E8E8E',
+  },
+  darkLabel: {
+    color: '#8E8E8E',
+  },
+  darkInput: {
+    backgroundColor: '#000000',
+    color: '#FFFFFF',
+    borderColor: '#FFFFFF',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  darkButton: {
+    backgroundColor: '#FFFFFF',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  darkButtonText: {
+    color: '#000000',
   },
 });

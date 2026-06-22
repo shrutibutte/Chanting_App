@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, SafeAreaView, Modal, FlatList, StatusBar, ScrollView, TextInput, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, SafeAreaView, Modal, SectionList, FlatList, StatusBar, ScrollView, TextInput, Alert } from 'react-native';
 import Svg, { Circle, Path, Line, Rect, Polyline } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useStore } from '../store/useStore';
 import { apiCall, syncOfflineCounter } from '../api/client';
 import NetInfo from '@react-native-community/netinfo';
+import { getLocalDateString } from '../utils/date.js';
+import { getTranslation } from '../utils/translations';
 
 const GODS_LIST = [
   { id: '1', name: 'राधा' },
@@ -30,16 +32,60 @@ const GODS_LIST = [
 ]
 
 export default function DashboardScreen({ onStartChanting, onPressStreak }) {
-  const { userToken, currentNaam, totalCount, todayCount, sessionCount, logout, dailyGoal, setStats, setNaam, incrementTap, addManualCount, lastUnlockedLevel, showLevelModal, unlockedLevelInfo, setShowLevelModal } = useStore();
+  const { userToken, currentNaam, totalCount, todayCount, sessionCount, logout, dailyGoal, setStats, setNaam, incrementTap, addManualCount, lastUnlockedLevel, showLevelModal, unlockedLevelInfo, setShowLevelModal, isDarkMode, language, customNaams, fetchCustomNaams, addCustomNaam } = useStore();
   const [loading, setLoading] = useState(false);
   const [synced, setSynced] = useState(true);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isChanting, setIsChanting] = useState(false); // Placeholder or unused local sync
   const [isBlackoutMode, setIsBlackoutMode] = useState(false);
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const [isNaamHidden, setIsNaamHidden] = useState(false);
   const [isTimerModalVisible, setIsTimerModalVisible] = useState(false);
   const [isLogMalaModalVisible, setIsLogMalaModalVisible] = useState(false);
   const [customCountInput, setCustomCountInput] = useState('');
+  
+  // Custom Naam input modal states
+  const [isAddCustomModalVisible, setIsAddCustomModalVisible] = useState(false);
+  const [customNaamInput, setCustomNaamInput] = useState('');
+
+  const handleSaveCustomNaam = async () => {
+    if (!customNaamInput || customNaamInput.trim() === '') {
+      return Alert.alert(
+        getTranslation(language, 'error'), 
+        getTranslation(language, 'nameCannotBeEmpty')
+      );
+    }
+    
+    try {
+      await addCustomNaam(customNaamInput.trim());
+      setCustomNaamInput('');
+      setIsAddCustomModalVisible(false);
+      fetchCustomNaams();
+    } catch (err) {
+      let errorMsg = err.message || 'Failed to save custom name';
+      
+      if (err.message && err.message.includes('already exists')) {
+        errorMsg = getTranslation(language, 'customNameExists');
+      }
+      
+      Alert.alert(
+        getTranslation(language, 'error'), 
+        errorMsg
+      );
+    }
+  };
+
+  useEffect(() => {
+    if (userToken) {
+      fetchCustomNaams();
+    }
+  }, [userToken]);
+
+  useEffect(() => {
+    if (isModalVisible && userToken) {
+      fetchCustomNaams();
+    }
+  }, [isModalVisible]);
 
   const handleBlackoutTap = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -65,15 +111,14 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
     const isSelected = currentNaam?.name === item.name;
     return (
       <TouchableOpacity
-        style={[styles.godItem, isSelected && styles.godItemSelected]}
+        style={[styles.godItem, isSelected && (isDarkMode ? styles.godItemSelectedDark : styles.godItemSelected), isDarkMode && styles.darkCardRow]}
         onPress={() => handleSelectNaam(item)}
       >
         <View style={styles.godTextContainer}>
-          <Text style={[styles.godName, isSelected && styles.godNameSelected]}>{item.name}</Text>
-          {/* <Text style={styles.godSubtitle}>{item.subtitle}</Text> */}
+          <Text style={[styles.godName, isSelected && (isDarkMode ? styles.godNameSelectedDark : styles.godNameSelected), isDarkMode && styles.darkCardTitle]}>{item.name}</Text>
         </View>
         {isSelected && (
-          <View style={styles.checkCircle}>
+          <View style={[styles.checkCircle, isDarkMode && styles.darkCheckCircle]}>
             <Text style={styles.checkIcon}>✓</Text>
           </View>
         )}
@@ -84,6 +129,10 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
   const fetchStats = async () => {
     try {
       setLoading(true);
+      
+      // Ensure daily reset runs locally before fetching
+      useStore.getState().checkDailyReset();
+
       const [todayRes, summaryRes] = await Promise.all([
         apiCall('/stats/today'),
         apiCall('/stats/summary')
@@ -140,20 +189,20 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
   });
 
   const today = new Date();
-  const todayStr = today.toISOString().split('T')[0];
+  const todayStr = getLocalDateString(today);
   groupedByDate[todayStr] = todayCount;
 
   let currentStreak = 0;
   let checkDate = new Date();
-  let cDateStr = checkDate.toISOString().split('T')[0];
+  let cDateStr = getLocalDateString(checkDate);
   if (!groupedByDate[cDateStr] || groupedByDate[cDateStr] === 0) {
     checkDate.setDate(checkDate.getDate() - 1);
-    cDateStr = checkDate.toISOString().split('T')[0];
+    cDateStr = getLocalDateString(checkDate);
   }
   while (groupedByDate[cDateStr] > 0) {
     currentStreak++;
     checkDate.setDate(checkDate.getDate() - 1);
-    cDateStr = checkDate.toISOString().split('T')[0];
+    cDateStr = getLocalDateString(checkDate);
   }
 
   if (isBlackoutMode) {
@@ -180,31 +229,31 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, isDarkMode && styles.darkContainer]}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Naam Jaap</Text>
+        <Text style={[styles.headerTitle, isDarkMode && styles.darkHeaderTitle]}>{getTranslation(language, 'appName')}</Text>
         <View style={styles.headerRight}>
           <TouchableOpacity style={styles.streakBadgeWrapper} onPress={onPressStreak}>
-            <View style={styles.streakCircle}>
-              <Text style={styles.streakCircleText}>{currentStreak}</Text>
+            <View style={[styles.streakCircle, isDarkMode && styles.darkStreakCircle]}>
+              <Text style={[styles.streakCircleText, isDarkMode && styles.darkStreakCircleText]}>{currentStreak}</Text>
             </View>
             <Text style={styles.streakFlame}>🔥</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.menuButton} onPress={() => setIsMenuVisible(true)}>
-            <Text style={styles.menuIcon}>☰</Text>
+            <Text style={[styles.menuIcon, isDarkMode && styles.darkMenuIcon]}>☰</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       {!synced && (
         <View style={{ alignItems: 'center', marginBottom: 10 }}>
-          <Text style={{ color: '#FF6B35', fontSize: 12 }}>Offline - Syncing later</Text>
+          <Text style={{ color: isDarkMode ? '#FFFFFF' : '#FF6B35', fontSize: 12 }}>{getTranslation(language, 'offlineMode')}</Text>
         </View>
       )}
 
       {/* Background sync indicator (optional, very subtle) */}
       {loading && (
-        <ActivityIndicator size="small" color="#FF6B35" style={{ position: 'absolute', top: 20, right: 24 }} />
+        <ActivityIndicator size="small" color={isDarkMode ? "#FFFFFF" : "#FF6B35"} style={{ position: 'absolute', top: 20, right: 24 }} />
       )}
 
       <View style={styles.chantingInfo}>
@@ -215,7 +264,8 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
               fontSize: (currentNaam?.name || 'Krishna').length > 40 ? 18 : (currentNaam?.name || 'Krishna').length > 15 ? 25 : 70,
               textAlign: 'center',
               paddingHorizontal: 20,
-              opacity: isNaamHidden ? 0 : 1
+              opacity: isNaamHidden ? 0 : 1,
+              color: isDarkMode ? '#FFFFFF' : '#FF6B35'
             }
           ]}
           numberOfLines={4}
@@ -224,7 +274,7 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
           {currentNaam?.name || 'Krishna'}
         </Text>
         <TouchableOpacity onPress={() => setIsModalVisible(true)} disabled={isNaamHidden} style={{ opacity: isNaamHidden ? 0 : 1 }}>
-          <Text style={styles.changeNameText}>Change Name</Text>
+          <Text style={[styles.changeNameText, isDarkMode && styles.darkChangeNameText]}>{getTranslation(language, 'changeName')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -236,10 +286,10 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
         <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center', marginBottom: 40 }}>
           <Svg width={size} height={size} style={{ position: 'absolute' }}>
             {/* Background Ring */}
-            <Circle stroke="#FFE6D3" fill="none" cx={size / 2} cy={size / 2} r={radius} strokeWidth={strokeWidth} />
+            <Circle stroke={isDarkMode ? "#333333" : "#FFE6D3"} fill="none" cx={size / 2} cy={size / 2} r={radius} strokeWidth={strokeWidth} />
             {/* Foreground Progress Ring */}
             <Circle
-              stroke="#FF6B35"
+              stroke={isDarkMode ? "#FFFFFF" : "#FF6B35"}
               fill="none"
               cx={size / 2} cy={size / 2} r={radius} strokeWidth={strokeWidth}
               strokeDasharray={`${circumference} ${circumference}`}
@@ -250,44 +300,44 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
           </Svg>
 
           <View style={styles.circleInner}>
-            <Text style={styles.countText}>{currentMalaProgress}/108</Text>
+            <Text style={[styles.countText, isDarkMode && styles.darkCountText]}>{currentMalaProgress}/108</Text>
           </View>
         </View>
       </TouchableOpacity>
 
       <View style={styles.statsCardWrapper}>
-        <View style={styles.statsCard}>
+        <View style={[styles.statsCard, isDarkMode && styles.darkCardRow]}>
           <View style={styles.statColumn}>
-            <Text style={styles.statNumber}>{displayTotalMalas}</Text>
-            <Text style={styles.statLabel}>Malas</Text>
+            <Text style={[styles.statNumber, isDarkMode && styles.darkStatNumber]}>{displayTotalMalas}</Text>
+            <Text style={[styles.statLabel, isDarkMode && styles.darkStatLabel]}>{getTranslation(language, 'malas')}</Text>
           </View>
 
-          <View style={styles.verticalDivider} />
+          <View style={[styles.verticalDivider, isDarkMode && { backgroundColor: '#333333' }]} />
 
           <View style={styles.statColumn}>
             {todayCount >= dailyGoal ? (
               <>
-                <Text style={[styles.statNumber, { color: '#00BFA5' }]}>
+                <Text style={[styles.statNumber, { color: isDarkMode ? '#FFFFFF' : '#00BFA5' }]}>
                   {todayCount}
                 </Text>
-                <Text style={[styles.statLabel, { color: '#00BFA5', fontWeight: 'bold' }]}>✅ Goal Met</Text>
+                <Text style={[styles.statLabel, { color: isDarkMode ? '#FFFFFF' : '#00BFA5', fontWeight: 'bold' }]}>✅ {getTranslation(language, 'goalMet')}</Text>
               </>
             ) : (
               <>
-                <Text style={styles.statNumber}>
+                <Text style={[styles.statNumber, isDarkMode && styles.darkStatNumber]}>
                   {todayCount}
                   <Text style={{fontSize: 14, color: '#A0A0A0'}}>{` / ${dailyGoal || 108}`}</Text>
                 </Text>
-                <Text style={styles.statLabel}>Today's Goal</Text>
+                <Text style={[styles.statLabel, isDarkMode && styles.darkStatLabel]}>{getTranslation(language, 'todayGoal')}</Text>
               </>
             )}
           </View>
 
-          <View style={styles.verticalDivider} />
+          <View style={[styles.verticalDivider, isDarkMode && { backgroundColor: '#333333' }]} />
 
           <View style={styles.statColumn}>
-            <Text style={styles.statNumber}>{totalCount}</Text>
-            <Text style={styles.statLabel}>Total Count</Text>
+            <Text style={[styles.statNumber, isDarkMode && styles.darkStatNumber]}>{totalCount}</Text>
+            <Text style={[styles.statLabel, isDarkMode && styles.darkStatLabel]}>{getTranslation(language, 'totalCount')}</Text>
           </View>
         </View>
       </View>
@@ -300,20 +350,60 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
         onRequestClose={() => setIsModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, isDarkMode && styles.darkModalContent, { height: '80%', paddingBottom: 80 }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Naam</Text>
-              <TouchableOpacity onPress={() => setIsModalVisible(false)}>
-                <Text style={styles.closeModalText}>✕</Text>
+              <TouchableOpacity onPress={() => setIsModalVisible(false)} style={{ padding: 4 }}>
+                <Ionicons name="chevron-back" size={24} color={isDarkMode ? "#FFFFFF" : "#FF6B35"} />
+              </TouchableOpacity>
+              <Text style={[styles.modalTitle, isDarkMode && styles.darkModalTitle]}>{getTranslation(language, 'selectMantra')}</Text>
+              <TouchableOpacity onPress={() => setIsAddCustomModalVisible(true)} style={{ padding: 4 }}>
+                <Ionicons name="add" size={28} color={isDarkMode ? "#FFFFFF" : "#FF6B35"} />
               </TouchableOpacity>
             </View>
-            <FlatList
-              data={GODS_LIST}
-              keyExtractor={(item) => item.id}
+
+            <SectionList
+              sections={[
+                {
+                  title: getTranslation(language, 'custom'),
+                  data: customNaams || [],
+                },
+                {
+                  title: getTranslation(language, 'sanatan'),
+                  data: GODS_LIST,
+                }
+              ]}
+              keyExtractor={(item, index) => item.id || item.name + index}
               renderItem={renderGodItem}
+              renderSectionHeader={({ section: { title, data } }) => {
+                if (title === getTranslation(language, 'custom') && data.length === 0) {
+                  return (
+                    <View style={styles.sectionHeaderContainer}>
+                      <Text style={[styles.sectionHeaderText, isDarkMode && styles.darkSectionHeaderText]}>{title}</Text>
+                      <Text style={[styles.noCustomText, isDarkMode && styles.darkNoCustomText]}>No custom names yet. Tap + to add.</Text>
+                    </View>
+                  );
+                }
+                return (
+                  <View style={styles.sectionHeaderContainer}>
+                    <Text style={[styles.sectionHeaderText, isDarkMode && styles.darkSectionHeaderText]}>{title}</Text>
+                  </View>
+                );
+              }}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: 20 }}
             />
+
+            {/* Cycle Language Floating Button inside modal */}
+            <TouchableOpacity 
+              style={[styles.langCycleFloatingButton, isDarkMode && styles.darkLangCycleFloatingButton]}
+              onPress={() => {
+                const languages = ['en', 'hi', 'mr'];
+                const nextIdx = (languages.indexOf(language) + 1) % languages.length;
+                useStore.getState().setLanguage(languages[nextIdx]);
+              }}
+            >
+              <Text style={[styles.langCycleFloatingText, isDarkMode && styles.darkLangCycleFloatingText]}>अ</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -326,24 +416,24 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
         onRequestClose={() => setIsMenuVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { height: '42%' }]}>
+          <View style={[styles.modalContent, isDarkMode && styles.darkModalContent, { height: '42%' }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Options</Text>
+              <Text style={[styles.modalTitle, isDarkMode && styles.darkModalTitle]}>{getTranslation(language, 'options')}</Text>
               <TouchableOpacity onPress={() => setIsMenuVisible(false)}>
-                <Text style={styles.closeModalText}>✕</Text>
+                <Text style={[styles.closeModalText, isDarkMode && styles.darkCloseModalText]}>✕</Text>
               </TouchableOpacity>
             </View>
             
             {/* Log Physical Mala */}
             <TouchableOpacity 
-              style={styles.menuOptionItem} 
+              style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]} 
               onPress={() => {
                 setIsMenuVisible(false);
                 setIsLogMalaModalVisible(true);
               }}
             >
               <View style={styles.menuIconContainer}>
-                <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF6B35" strokeWidth="2.2">
+                <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={isDarkMode ? "#FFFFFF" : "#FF6B35"} strokeWidth="2.2">
                   <Circle cx="12" cy="5" r="2" />
                   <Circle cx="16.5" cy="7" r="2" />
                   <Circle cx="19" cy="11.5" r="2" />
@@ -356,13 +446,13 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
                 </Svg>
               </View>
               <View style={styles.menuOptionTextContainer}>
-                <Text style={styles.menuOptionTitle}>Add Count</Text>
+                <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{getTranslation(language, 'addCount')}</Text>
               </View>
             </TouchableOpacity>
             
             {/* Hide/Show Naam */}
             <TouchableOpacity 
-              style={styles.menuOptionItem} 
+              style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]} 
               onPress={() => {
                 setIsNaamHidden(!isNaamHidden);
                 setIsMenuVisible(false);
@@ -370,56 +460,56 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
             >
               <View style={styles.menuIconContainer}>
                 {isNaamHidden ? (
-                  <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#333333" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={isDarkMode ? "#FFFFFF" : "#333333"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                     <Path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                     <Circle cx="12" cy="12" r="3" />
                   </Svg>
                 ) : (
-                  <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#333333" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={isDarkMode ? "#FFFFFF" : "#333333"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                     <Path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
                     <Line x1="1" y1="1" x2="23" y2="23" />
                   </Svg>
                 )}
               </View>
               <View style={styles.menuOptionTextContainer}>
-                <Text style={styles.menuOptionTitle}>{isNaamHidden ? 'Show Naam' : 'Hide Naam'}</Text>
+                <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{isNaamHidden ? getTranslation(language, 'showNaam') : getTranslation(language, 'hideNaam')}</Text>
               </View>
             </TouchableOpacity>
 
             {/* Set Timer */}
             <TouchableOpacity 
-              style={styles.menuOptionItem} 
+              style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]} 
               onPress={() => {
                 setIsMenuVisible(false);
                 setIsTimerModalVisible(true);
               }}
             >
               <View style={styles.menuIconContainer}>
-                <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#333333" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={isDarkMode ? "#FFFFFF" : "#333333"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <Circle cx="12" cy="12" r="10" />
                   <Polyline points="12 6 12 12 16 14" />
                 </Svg>
               </View>
               <View style={styles.menuOptionTextContainer}>
-                <Text style={styles.menuOptionTitle}>Set Timer</Text>
+                <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{getTranslation(language, 'setTimer')}</Text>
               </View>
             </TouchableOpacity>
 
             {/* Blackout Mode */}
             <TouchableOpacity 
-              style={styles.menuOptionItem} 
+              style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]} 
               onPress={() => {
                 setIsMenuVisible(false);
                 setIsBlackoutMode(true);
               }}
             >
               <View style={styles.menuIconContainer}>
-                <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#333333" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <Circle cx="12" cy="12" r="10" fill="#333333" />
+                <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={isDarkMode ? "#FFFFFF" : "#333333"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <Circle cx="12" cy="12" r="10" fill={isDarkMode ? "#FFFFFF" : "#333333"} />
                 </Svg>
               </View>
               <View style={styles.menuOptionTextContainer}>
-                <Text style={styles.menuOptionTitle}>Blackout Mode</Text>
+                <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{getTranslation(language, 'blackoutMode')}</Text>
               </View>
             </TouchableOpacity>
           </View>
@@ -434,82 +524,81 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
         onRequestClose={() => setIsLogMalaModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { height: '55%' }]}>
+          <View style={[styles.modalContent, isDarkMode && styles.darkModalContent, { height: '55%' }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Add Log Count</Text>
+              <Text style={[styles.modalTitle, isDarkMode && styles.darkModalTitle]}>{getTranslation(language, 'addLogCount')}</Text>
               <TouchableOpacity onPress={() => setIsLogMalaModalVisible(false)}>
-                <Text style={styles.closeModalText}>✕</Text>
+                <Text style={[styles.closeModalText, isDarkMode && styles.darkCloseModalText]}>✕</Text>
               </TouchableOpacity>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
-              {/* <Text style={styles.modalInstruction}>Select number of rounds (Malas of 108 beads) or enter custom count below:</Text> */}
-              
               <View style={styles.quickMalaContainer}>
                 <TouchableOpacity 
-                  style={styles.quickMalaBtn}
+                  style={[styles.quickMalaBtn, isDarkMode && styles.darkQuickMalaBtn]}
                   onPress={() => {
                     addManualCount(108);
                     setIsLogMalaModalVisible(false);
                     setTimeout(() => syncOfflineCounter(), 500);
                   }}
                 >
-                  <Text style={styles.quickMalaBtnText}>+1 Mala</Text>
-                  <Text style={styles.quickMalaBtnSub}>108 counts</Text>
+                  <Text style={[styles.quickMalaBtnText, isDarkMode && styles.darkQuickMalaBtnText]}>+1 {getTranslation(language, 'malas')}</Text>
+                  <Text style={[styles.quickMalaBtnSub, isDarkMode && styles.darkQuickMalaBtnSub]}>108 {getTranslation(language, 'counts')}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity 
-                  style={styles.quickMalaBtn}
+                  style={[styles.quickMalaBtn, isDarkMode && styles.darkQuickMalaBtn]}
                   onPress={() => {
                     addManualCount(216);
                     setIsLogMalaModalVisible(false);
                     setTimeout(() => syncOfflineCounter(), 500);
                   }}
                 >
-                  <Text style={styles.quickMalaBtnText}>+2 Malas</Text>
-                  <Text style={styles.quickMalaBtnSub}>216 counts</Text>
+                  <Text style={[styles.quickMalaBtnText, isDarkMode && styles.darkQuickMalaBtnText]}>+2 {getTranslation(language, 'malas')}</Text>
+                  <Text style={[styles.quickMalaBtnSub, isDarkMode && styles.darkQuickMalaBtnSub]}>216 {getTranslation(language, 'counts')}</Text>
                 </TouchableOpacity>
               </View>
 
               <View style={styles.quickMalaContainer}>
                 <TouchableOpacity 
-                  style={styles.quickMalaBtn}
+                  style={[styles.quickMalaBtn, isDarkMode && styles.darkQuickMalaBtn]}
                   onPress={() => {
                     addManualCount(432);
                     setIsLogMalaModalVisible(false);
                     setTimeout(() => syncOfflineCounter(), 500);
                   }}
                 >
-                  <Text style={styles.quickMalaBtnText}>+4 Malas</Text>
-                  <Text style={styles.quickMalaBtnSub}>432 counts</Text>
+                  <Text style={[styles.quickMalaBtnText, isDarkMode && styles.darkQuickMalaBtnText]}>+4 {getTranslation(language, 'malas')}</Text>
+                  <Text style={[styles.quickMalaBtnSub, isDarkMode && styles.darkQuickMalaBtnSub]}>432 {getTranslation(language, 'counts')}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity 
-                  style={styles.quickMalaBtn}
+                  style={[styles.quickMalaBtn, isDarkMode && styles.darkQuickMalaBtn]}
                   onPress={() => {
                     addManualCount(864);
                     setIsLogMalaModalVisible(false);
                     setTimeout(() => syncOfflineCounter(), 500);
                   }}
                 >
-                  <Text style={styles.quickMalaBtnText}>+8 Malas</Text>
-                  <Text style={styles.quickMalaBtnSub}>864 counts</Text>
+                  <Text style={[styles.quickMalaBtnText, isDarkMode && styles.darkQuickMalaBtnText]}>+8 {getTranslation(language, 'malas')}</Text>
+                  <Text style={[styles.quickMalaBtnSub, isDarkMode && styles.darkQuickMalaBtnSub]}>864 {getTranslation(language, 'counts')}</Text>
                 </TouchableOpacity>
               </View>
 
               <View style={styles.customCountContainer}>
-                <Text style={styles.customCountLabel}>Or enter custom counts:</Text>
+                <Text style={[styles.customCountLabel, isDarkMode && styles.darkCustomCountLabel]}>{getTranslation(language, 'orEnterCustomCounts')}</Text>
                 <TextInput
-                  style={styles.customCountInput}
+                  style={[styles.customCountInput, isDarkMode && styles.darkCustomCountInput]}
                   value={customCountInput}
                   onChangeText={setCustomCountInput}
                   keyboardType="numeric"
                   placeholder="e.g. 50 or 108"
+                  placeholderTextColor={isDarkMode ? "#666" : "#A0A0A0"}
                 />
               </View>
 
               <TouchableOpacity 
-                style={styles.submitCountBtn}
+                style={[styles.submitCountBtn, isDarkMode && styles.darkSubmitCountBtn]}
                 onPress={() => {
                   const count = parseInt(customCountInput, 10);
                   if (!isNaN(count) && count > 0) {
@@ -518,11 +607,11 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
                     setIsLogMalaModalVisible(false);
                     setTimeout(() => syncOfflineCounter(), 500);
                   } else {
-                    Alert.alert('Invalid Count', 'Please enter a valid number of counts greater than 0.');
+                    Alert.alert(getTranslation(language, 'invalidCount'), getTranslation(language, 'enterValidCountMsg'));
                   }
                 }}
               >
-                <Text style={styles.submitCountBtnText}>Add Count</Text>
+                <Text style={[styles.submitCountBtnText, isDarkMode && styles.darkSubmitCountBtnText]}>{getTranslation(language, 'addCount')}</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>
@@ -537,29 +626,33 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
         onRequestClose={() => setShowLevelModal(false)}
       >
         <View style={styles.levelOverlay}>
-          <View style={styles.levelCard}>
-            <Text style={styles.levelTitleText}>🌟 LEVEL UNLOCKED! 🌟</Text>
+          <View style={[styles.levelCard, isDarkMode && styles.darkLevelCard]}>
+            <Text style={[styles.levelTitleText, isDarkMode && styles.darkLevelTitleText]}>{getTranslation(language, 'levelUnlockedTitle')}</Text>
             
             <View style={styles.levelCelebrationIconContainer}>
               <Text style={styles.levelCelebrationIcon}>{unlockedLevelInfo?.icon || '🌱'}</Text>
             </View>
 
-            <Text style={styles.levelCongratulationText}>
-              Congratulations! You have reached a new milestone in your spiritual journey.
+            <Text style={[styles.levelCongratulationText, isDarkMode && styles.darkLevelCongratulationText]}>
+              {getTranslation(language, 'levelCongratulationText')}
             </Text>
 
-            <View style={styles.levelHighlightBox}>
-              <Text style={styles.levelHighlightTitle}>NEW LEVEL</Text>
-              <Text style={styles.levelHighlightVal}>{unlockedLevelInfo?.name}</Text>
-              <Text style={styles.levelHighlightSub}>Unlocked at {unlockedLevelInfo?.target.toLocaleString()} Naam Jaap</Text>
+            <View style={[styles.levelHighlightBox, isDarkMode && styles.darkLevelHighlightBox]}>
+              <Text style={[styles.levelHighlightTitle, isDarkMode && styles.darkLevelHighlightTitle]}>{getTranslation(language, 'newLevelLabel')}</Text>
+              <Text style={[styles.levelHighlightVal, isDarkMode && styles.darkLevelHighlightVal]}>
+                {unlockedLevelInfo?.name ? getTranslation(language, `level_${unlockedLevelInfo.name.replace(/\s+/g, '')}`) : ''}
+              </Text>
+              <Text style={[styles.levelHighlightSub, isDarkMode && styles.darkLevelHighlightSub]}>
+                {getTranslation(language, 'unlockedAtLabel', { target: unlockedLevelInfo?.target.toLocaleString() })}
+              </Text>
             </View>
 
             <TouchableOpacity 
-              style={styles.continueJourneyButton} 
+              style={[styles.continueJourneyButton, isDarkMode && styles.darkContinueJourneyButton]} 
               onPress={() => setShowLevelModal(false)}
               activeOpacity={0.8}
             >
-              <Text style={styles.continueJourneyButtonText}>Continue Journey</Text>
+              <Text style={[styles.continueJourneyButtonText, isDarkMode && styles.darkContinueJourneyButtonText]}>{getTranslation(language, 'continueJourney')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -573,85 +666,172 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
         onRequestClose={() => setIsTimerModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { height: '45%' }]}>
+          <View style={[styles.modalContent, isDarkMode && styles.darkModalContent, { height: '45%' }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Set Chanting Timer</Text>
+              <Text style={[styles.modalTitle, isDarkMode && styles.darkModalTitle]}>{getTranslation(language, 'setChantingTimer')}</Text>
               <TouchableOpacity onPress={() => setIsTimerModalVisible(false)}>
-                <Text style={styles.closeModalText}>✕</Text>
+                <Text style={[styles.closeModalText, isDarkMode && styles.darkCloseModalText]}>✕</Text>
               </TouchableOpacity>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
               <TouchableOpacity 
-                style={styles.menuOptionItem} 
+                style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]} 
                 onPress={() => {
                   setIsTimerModalVisible(false);
                   onStartChanting(0); // 0 means no timer
                 }}
               >
-                <Text style={[styles.menuOptionTitle, { color: '#FF6B35' }]}>No Timer (Chant Indefinitely)</Text>
+                <Text style={[styles.menuOptionTitle, { color: isDarkMode ? '#FFFFFF' : '#FF6B35' }]}>{getTranslation(language, 'noTimerOption')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity 
-                style={styles.menuOptionItem} 
+                style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]} 
                 onPress={() => {
                   setIsTimerModalVisible(false);
                   onStartChanting(60); // 1 minute
                 }}
               >
-                <Text style={styles.menuOptionTitle}>1 Minute</Text>
+                <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{getTranslation(language, 'oneMinute')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity 
-                style={styles.menuOptionItem} 
+                style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]} 
                 onPress={() => {
                   setIsTimerModalVisible(false);
                   onStartChanting(300); // 5 minutes
                 }}
               >
-                <Text style={styles.menuOptionTitle}>5 Minutes</Text>
+                <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{getTranslation(language, 'fiveMinutes')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity 
-                style={styles.menuOptionItem} 
+                style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]} 
                 onPress={() => {
                   setIsTimerModalVisible(false);
                   onStartChanting(600); // 10 minutes
                 }}
               >
-                <Text style={styles.menuOptionTitle}>10 Minutes</Text>
+                <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{getTranslation(language, 'tenMinutes')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity 
-                style={styles.menuOptionItem} 
+                style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]} 
                 onPress={() => {
                   setIsTimerModalVisible(false);
                   onStartChanting(900); // 15 minutes
                 }}
               >
-                <Text style={styles.menuOptionTitle}>15 Minutes</Text>
+                <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{getTranslation(language, 'fifteenMinutes')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity 
-                style={styles.menuOptionItem} 
+                style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]} 
                 onPress={() => {
                   setIsTimerModalVisible(false);
                   onStartChanting(1200); // 20 minutes
                 }}
               >
-                <Text style={styles.menuOptionTitle}>20 Minutes</Text>
+                <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{getTranslation(language, 'twentyMinutes')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity 
-                style={styles.menuOptionItem} 
+                style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]} 
                 onPress={() => {
                   setIsTimerModalVisible(false);
                   onStartChanting(1800); // 30 minutes
                 }}
               >
-                <Text style={styles.menuOptionTitle}>30 Minutes</Text>
+                <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{getTranslation(language, 'thirtyMinutes')}</Text>
               </TouchableOpacity>
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Add Custom Naam Modal */}
+      <Modal
+        visible={isChanting ? false : isAddCustomModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsAddCustomModalVisible(false)}
+      >
+        <View style={styles.centerModalOverlay}>
+          <View style={[styles.customModalContent, isDarkMode && styles.darkCustomModalContent]}>
+            <Text style={[styles.customModalTitle, isDarkMode && styles.darkCustomModalTitle]}>
+              {getTranslation(language, 'addCustomMantra')}
+            </Text>
+            
+            <Text style={[styles.customModalSubtitle, isDarkMode && styles.darkCustomModalSubtitle]}>
+              {getTranslation(language, 'addCustomSubtitle')}
+            </Text>
+
+            <TextInput
+              style={[styles.customModalInput, isDarkMode && styles.darkCustomModalInput]}
+              value={customNaamInput}
+              onChangeText={setCustomNaamInput}
+              placeholder={getTranslation(language, 'mantraPlaceholder')}
+              placeholderTextColor={isDarkMode ? "#666" : "#A89E94"}
+              maxLength={100}
+              autoFocus
+            />
+
+            {/* Suggestions Header */}
+            <Text style={[styles.suggestionsHeader, isDarkMode && styles.darkSuggestionsHeader]}>
+              ✨ {getTranslation(language, 'suggestions')}
+            </Text>
+
+            {/* Suggestion Chips */}
+            <View style={styles.suggestionsContainer}>
+              {(language === 'hi' || language === 'mr' 
+                ? ['राधे कृष्ण', 'श्री राम', 'ॐ नमः शिवाय', 'हरे कृष्ण', 'ॐ नमो नारायणाय']
+                : ['Radhe Krishna', 'Shri Ram', 'Om Namah Shivaya', 'Hare Krishna', 'Om Namo Narayanaya']
+              ).map((sug) => (
+                <TouchableOpacity
+                  key={sug}
+                  style={[
+                    styles.suggestionChip, 
+                    isDarkMode && styles.darkSuggestionChip,
+                    customNaamInput.trim() === sug && (isDarkMode ? styles.darkSuggestionChipSelected : styles.suggestionChipSelected)
+                  ]}
+                  onPress={() => setCustomNaamInput(sug)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[
+                    styles.suggestionChipText, 
+                    isDarkMode && styles.darkSuggestionChipText,
+                    customNaamInput.trim() === sug && (isDarkMode ? styles.darkSuggestionChipTextSelected : styles.suggestionChipTextSelected)
+                  ]}>
+                    {sug}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.customModalButtons}>
+              <TouchableOpacity 
+                style={[styles.customModalBtnCancel, isDarkMode && styles.darkCustomModalBtnCancel]} 
+                onPress={() => {
+                  setCustomNaamInput('');
+                  setIsAddCustomModalVisible(false);
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.customModalBtnCancelText, isDarkMode && styles.darkCustomModalBtnCancelText]}>
+                  {getTranslation(language, 'cancel')}
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.customModalBtnSave, isDarkMode && styles.darkCustomModalBtnSave]} 
+                onPress={handleSaveCustomNaam}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.customModalBtnSaveText, isDarkMode && styles.darkCustomModalBtnSaveText]}>
+                  {getTranslation(language, 'save')}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -760,6 +940,7 @@ const styles = StyleSheet.create({
     // fontSize: 60,
     fontWeight: '800',
     marginBottom: 8,
+    marginTop:30,
   },
   changeNameText: {
     color: '#fc8f67ff',
@@ -1004,5 +1185,451 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  // Dark Mode Styles
+  darkContainer: {
+    backgroundColor: '#000000',
+  },
+  darkHeaderTitle: {
+    color: '#FFFFFF',
+  },
+  darkStreakCircle: {
+    backgroundColor: '#FFFFFF',
+  },
+  darkStreakCircleText: {
+    color: '#000000',
+  },
+  darkMenuIcon: {
+    color: '#FFFFFF',
+  },
+  darkChantingName: {
+    color: '#FFFFFF',
+  },
+  darkChangeNameText: {
+    color: '#FFFFFF',
+  },
+  darkCountText: {
+    color: '#FFFFFF',
+  },
+  darkCardRow: {
+    backgroundColor: '#000000',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  darkStatNumber: {
+    color: '#FFFFFF',
+  },
+  darkStatLabel: {
+    color: '#8E8E8E',
+  },
+  darkModalContent: {
+    backgroundColor: '#000000',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+  },
+  darkModalTitle: {
+    color: '#FFFFFF',
+  },
+  darkCloseModalText: {
+    color: '#FFFFFF',
+  },
+  darkMenuOptionTitle: {
+    color: '#FFFFFF',
+  },
+  darkQuickMalaBtn: {
+    backgroundColor: '#000000',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+  },
+  darkQuickMalaBtnText: {
+    color: '#FFFFFF',
+  },
+  darkQuickMalaBtnSub: {
+    color: '#8E8E8E',
+  },
+  darkCustomCountLabel: {
+    color: '#FFFFFF',
+  },
+  darkCustomCountInput: {
+    backgroundColor: '#000000',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+    color: '#FFFFFF',
+  },
+  darkSubmitCountBtn: {
+    backgroundColor: '#FFFFFF',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  darkSubmitCountBtnText: {
+    color: '#000000',
+  },
+  levelOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  levelCard: {
+    width: '88%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  levelTitleText: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#FF6B35',
+    textAlign: 'center',
+    marginBottom: 20,
+    letterSpacing: 0.5,
+  },
+  levelCelebrationIconContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#FFF2E6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: '#FFE6D3',
+  },
+  levelCelebrationIcon: {
+    fontSize: 48,
+  },
+  levelCongratulationText: {
+    fontSize: 14,
+    color: '#7A726A',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  levelHighlightBox: {
+    width: '100%',
+    backgroundColor: '#FFFDF9',
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderWidth: 1,
+    borderColor: '#F4EFEA',
+    alignItems: 'center',
+    marginBottom: 28,
+  },
+  levelHighlightTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#A89E94',
+    letterSpacing: 1,
+    marginBottom: 6,
+    textTransform: 'uppercase',
+  },
+  levelHighlightVal: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FF6B35',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  levelHighlightSub: {
+    fontSize: 12,
+    color: '#8E8E8E',
+  },
+  continueJourneyButton: {
+    width: '100%',
+    backgroundColor: '#FF6B35',
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: 'center',
+    shadowColor: '#FF6B35',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  continueJourneyButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  darkLevelCard: {
+    backgroundColor: '#000000',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+  },
+  darkLevelTitleText: {
+    color: '#FFFFFF',
+  },
+  darkLevelCongratulationText: {
+    color: '#CCCCCC',
+  },
+  darkLevelHighlightBox: {
+    backgroundColor: '#000000',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+  },
+  darkLevelHighlightTitle: {
+    color: '#8E8E8E',
+  },
+  darkLevelHighlightVal: {
+    color: '#FFFFFF',
+  },
+  darkLevelHighlightSub: {
+    color: '#CCCCCC',
+  },
+  darkContinueJourneyButton: {
+    backgroundColor: '#FFFFFF',
+  },
+  darkContinueJourneyButtonText: {
+    color: '#000000',
+  },
+  darkMenuOptionItem: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#222222',
+  },
+  godItemSelectedDark: {
+    backgroundColor: '#222222',
+  },
+  godNameSelectedDark: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+  },
+  darkCheckCircle: {
+    backgroundColor: '#FFFFFF',
+  },
+  sectionHeaderContainer: {
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    backgroundColor: 'transparent',
+  },
+  sectionHeaderText: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#8E8E8E',
+    letterSpacing: 1.2,
+    marginTop: 12,
+    marginBottom: 4,
+    textTransform: 'uppercase',
+  },
+  noCustomText: {
+    fontSize: 13,
+    color: '#A0A0A0',
+    marginTop: 8,
+    fontStyle: 'italic',
+    paddingLeft: 12,
+  },
+  langCycleFloatingButton: {
+    position: 'absolute',
+    left: 20,
+    bottom: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E0D6CB',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
+    zIndex: 9999,
+  },
+  langCycleFloatingText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333333',
+  },
+  darkLangCycleFloatingButton: {
+    backgroundColor: '#111111',
+    borderColor: '#333333',
+  },
+  darkLangCycleFloatingText: {
+    color: '#FFFFFF',
+  },
+  darkSectionHeaderText: {
+    color: '#8E8E8E',
+  },
+  darkNoCustomText: {
+    color: '#666666',
+  },
+  centerModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  customModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 28,
+    padding: 24,
+    width: '85%',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  customModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333333',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  customModalSubtitle: {
+    fontSize: 13,
+    color: '#8E8E8E',
+    textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: 18,
+    paddingHorizontal: 8,
+  },
+  customModalInput: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#FFE6D3',
+    backgroundColor: '#FFFDF9',
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    color: '#333333',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  suggestionsHeader: {
+    alignSelf: 'flex-start',
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#8E8E8E',
+    marginBottom: 10,
+    paddingLeft: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  suggestionsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    marginBottom: 24,
+    width: '100%',
+  },
+  suggestionChip: {
+    backgroundColor: '#FFF2E6',
+    borderWidth: 1,
+    borderColor: '#FFE6D3',
+    borderRadius: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    margin: 4,
+  },
+  suggestionChipSelected: {
+    backgroundColor: '#FF6B35',
+    borderColor: '#FF6B35',
+  },
+  suggestionChipText: {
+    color: '#FF6B35',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  suggestionChipTextSelected: {
+    color: '#FFFFFF',
+  },
+  customModalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  customModalBtnCancel: {
+    flex: 1,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginRight: 8,
+    borderRadius: 16,
+    backgroundColor: '#F7F7F7',
+  },
+  customModalBtnSave: {
+    flex: 1,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginLeft: 8,
+    borderRadius: 16,
+    backgroundColor: '#FF6B35',
+    shadowColor: '#FF6B35',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  customModalBtnCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+  },
+  customModalBtnSaveText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  darkCustomModalContent: {
+    backgroundColor: '#000000',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+  },
+  darkCustomModalTitle: {
+    color: '#FFFFFF',
+  },
+  darkCustomModalSubtitle: {
+    color: '#CCCCCC',
+  },
+  darkCustomModalInput: {
+    backgroundColor: '#000000',
+    borderColor: '#FFFFFF',
+    color: '#FFFFFF',
+  },
+  darkSuggestionsHeader: {
+    color: '#FFFFFF',
+  },
+  darkSuggestionChip: {
+    backgroundColor: '#111111',
+    borderColor: '#333333',
+  },
+  darkSuggestionChipSelected: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#FFFFFF',
+  },
+  darkSuggestionChipText: {
+    color: '#FFFFFF',
+  },
+  darkSuggestionChipTextSelected: {
+    color: '#000000',
+  },
+  darkCustomModalBtnCancel: {
+    backgroundColor: '#111111',
+    borderWidth: 1,
+    borderColor: '#333333',
+  },
+  darkCustomModalBtnCancelText: {
+    color: '#FFFFFF',
+  },
+  darkCustomModalBtnSave: {
+    backgroundColor: '#FFFFFF',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  darkCustomModalBtnSaveText: {
+    color: '#000000',
   },
 });

@@ -18,6 +18,14 @@ const JWT_SECRET = process.env.JWT_SECRET || 'spiritual_secret_108';
 app.use(cors());
 app.use(express.json());
 
+// Handle malformed JSON body errors
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    return res.status(400).json({ error: 'Malformed JSON payload', details: err.message });
+  }
+  next();
+});
+
 // --- Health Check ---
 app.get('/', (req, res) => {
   res.json({ status: 'success', message: 'Chanting App Backend is running!' });
@@ -53,7 +61,7 @@ app.post('/auth/send-otp', async (req, res) => {
 
   // Generate 6-digit OTP
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  otps.set(email, otp);
+  otps.set(email, { otp, expiresAt: Date.now() + 10 * 60 * 1000, attempts: 0 });
   
   console.log(`[AUTH] Generating OTP for ${email}`);
   
@@ -77,9 +85,23 @@ app.post('/auth/verify-otp', async (req, res) => {
   const { email, otp } = req.body;
   if (!email || !otp) return res.status(400).json({ error: 'Email and OTP required' });
 
-  const storedOtp = otps.get(email);
-  if (storedOtp !== otp) {
-    return res.status(400).json({ error: 'Invalid OTP' });
+  const storedOtpData = otps.get(email);
+  if (!storedOtpData) {
+    return res.status(400).json({ error: 'No active OTP request found' });
+  }
+
+  if (Date.now() > storedOtpData.expiresAt) {
+    otps.delete(email);
+    return res.status(400).json({ error: 'OTP has expired. Please request a new one.' });
+  }
+
+  if (storedOtpData.otp !== otp) {
+    storedOtpData.attempts += 1;
+    if (storedOtpData.attempts >= 5) {
+      otps.delete(email);
+      return res.status(400).json({ error: 'Too many incorrect attempts. OTP invalidated.' });
+    }
+    return res.status(400).json({ error: `Invalid OTP. Attempts remaining: ${5 - storedOtpData.attempts}` });
   }
 
   // Cleanup OTP
@@ -170,6 +192,60 @@ app.get('/stats/summary', authenticateToken, async (req, res) => {
 
   // Basic aggregation - can be expanded as per user preference
   res.json({ totalEntries: records.length, records });
+});
+
+// --- Custom Naam APIs ---
+
+// Fetch user's custom names
+app.get('/custom-naams', authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+  try {
+    const list = await prisma.customNaam.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'asc' }
+    });
+    res.json({ success: true, naams: list });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch custom names', details: error.message });
+  }
+});
+
+// Add a custom name
+app.post('/custom-naams', authenticateToken, async (req, res) => {
+  const { name } = req.body;
+  const userId = req.user.id;
+  
+  if (!name || name.trim() === '') {
+    return res.status(400).json({ error: 'Name cannot be empty' });
+  }
+
+  try {
+    // Check if user already has a custom name with the same text (case-insensitive)
+    const existing = await prisma.customNaam.findFirst({
+      where: {
+        userId,
+        name: {
+          equals: name.trim(),
+          mode: 'insensitive'
+        }
+      }
+    });
+
+    if (existing) {
+      return res.status(400).json({ error: 'This custom name already exists' });
+    }
+
+    const created = await prisma.customNaam.create({
+      data: {
+        userId,
+        name: name.trim()
+      }
+    });
+
+    res.json({ success: true, naam: created });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to save custom name', details: error.message });
+  }
 });
 
 // Start Server

@@ -12,6 +12,8 @@ import SettingsScreen from './src/screens/SettingsScreen';
 import StreakScreen from './src/screens/StreakScreen';
 import JourneyScreen from './src/screens/JourneyScreen';
 import { requestNotificationPermissions, scheduleDailyReminder, updateTargetReminder } from './src/utils/notifications';
+import { getLocalDateString } from './src/utils/date.js';
+import { getTranslation } from './src/utils/translations';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -52,13 +54,14 @@ const confettiParticles = Array.from({ length: 40 }).map((_, i) => {
 });
 
 function BottomTabBar({ activeTab, onTabSelect }) {
+  const isDarkMode = useStore((state) => state.isDarkMode);
   return (
-    <View style={styles.tabContainer}>
+    <View style={[styles.tabContainer, isDarkMode && styles.darkTabContainer]}>
       <TouchableOpacity style={styles.tabItem} onPress={() => onTabSelect('home')}>
         <Ionicons 
           name={activeTab === 'home' ? 'home' : 'home-outline'} 
           size={24} 
-          color={activeTab === 'home' ? '#FF6B35' : '#B0B0B0'} 
+          color={activeTab === 'home' ? (isDarkMode ? '#FFFFFF' : '#FF6B35') : (isDarkMode ? '#555555' : '#B0B0B0')} 
         />
       </TouchableOpacity>
 
@@ -66,7 +69,7 @@ function BottomTabBar({ activeTab, onTabSelect }) {
         <Ionicons 
           name={activeTab === 'chart' ? 'stats-chart' : 'stats-chart-outline'} 
           size={24} 
-          color={activeTab === 'chart' ? '#FF6B35' : '#B0B0B0'} 
+          color={activeTab === 'chart' ? (isDarkMode ? '#FFFFFF' : '#FF6B35') : (isDarkMode ? '#555555' : '#B0B0B0')} 
         />
       </TouchableOpacity>
 
@@ -74,7 +77,7 @@ function BottomTabBar({ activeTab, onTabSelect }) {
         <Ionicons 
           name={activeTab === 'journey' ? 'flower' : 'flower-outline'} 
           size={24} 
-          color={activeTab === 'journey' ? '#FF6B35' : '#B0B0B0'} 
+          color={activeTab === 'journey' ? (isDarkMode ? '#FFFFFF' : '#FF6B35') : (isDarkMode ? '#555555' : '#B0B0B0')} 
         />
       </TouchableOpacity>
 
@@ -82,7 +85,7 @@ function BottomTabBar({ activeTab, onTabSelect }) {
         <Ionicons 
           name={activeTab === 'settings' ? 'settings' : 'settings-outline'} 
           size={24} 
-          color={activeTab === 'settings' ? '#FF6B35' : '#B0B0B0'} 
+          color={activeTab === 'settings' ? (isDarkMode ? '#FFFFFF' : '#FF6B35') : (isDarkMode ? '#555555' : '#B0B0B0')} 
         />
       </TouchableOpacity>
     </View>
@@ -105,7 +108,9 @@ export default function App() {
     lastStreakMaintainedPopupDate,
     setLastStreakMaintainedPopupDate,
     isReminderEnabled,
-    reminderTime
+    reminderTime,
+    isDarkMode,
+    language
   } = useStore();
 
   // Toast state
@@ -129,31 +134,37 @@ export default function App() {
     });
 
     const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = getLocalDateString(today);
     groupedByDate[todayStr] = todayCount;
 
     let streak = 0;
     let checkDate = new Date();
-    let cDateStr = checkDate.toISOString().split('T')[0];
+    let cDateStr = getLocalDateString(checkDate);
 
     // If today is 0, start checking yesterday
     if (!groupedByDate[cDateStr] || groupedByDate[cDateStr] === 0) {
       checkDate.setDate(checkDate.getDate() - 1);
-      cDateStr = checkDate.toISOString().split('T')[0];
+      cDateStr = getLocalDateString(checkDate);
     }
 
     while (groupedByDate[cDateStr] > 0) {
       streak++;
       checkDate.setDate(checkDate.getDate() - 1);
-      cDateStr = checkDate.toISOString().split('T')[0];
+      cDateStr = getLocalDateString(checkDate);
     }
 
     return streak;
   }, [historyRecords, todayCount]);
 
   useEffect(() => {
+    // Check for daily reset immediately on mount
+    useStore.getState().checkDailyReset();
+
     // 1. AppState Listener for Background/Close Sync
     const subscription = AppState.addEventListener('change', nextAppState => {
+      if (nextAppState === 'active') {
+        useStore.getState().checkDailyReset();
+      }
       if (
         appState.current.match(/active/) &&
         nextAppState.match(/inactive|background/)
@@ -214,7 +225,7 @@ export default function App() {
   // One-time Toast Trigger on Mount
   useEffect(() => {
     if (userToken) {
-      const currentDate = new Date().toISOString().split('T')[0];
+      const currentDate = getLocalDateString();
       // Check if goal is already met today and the popup wasn't shown today
       if (todayCount >= dailyGoal && lastStreakMaintainedPopupDate !== currentDate) {
         const timer = setTimeout(() => {
@@ -334,8 +345,8 @@ export default function App() {
   // Very lean conditional rendering approach as requested
   if (!userToken) {
     return (
-      <View style={[styles.container, { backgroundColor: '#FFFDF9' }]}>
-        <StatusBar barStyle="dark-content" />
+      <View style={[styles.container, isDarkMode && styles.darkContainer]}>
+        <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
         <AuthScreen />
       </View>
     );
@@ -356,8 +367,11 @@ export default function App() {
   });
 
   return (
-    <View style={[styles.container, { backgroundColor: '#FFFDF9' }]}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFDF9" />
+    <View style={[styles.container, isDarkMode && styles.darkContainer]}>
+      <StatusBar 
+        barStyle={isDarkMode ? "light-content" : "dark-content"} 
+        backgroundColor={isDarkMode ? "#000000" : "#FFFDF9"} 
+      />
 
       {activeTab === 'home' && (
         <DashboardScreen
@@ -377,11 +391,15 @@ export default function App() {
 
       {/* Floating / Sliding Daily Toast Popup */}
       {showToast && (
-        <Animated.View style={[styles.toastContainer, { transform: [{ translateY: toastY }] }]}>
-          <Ionicons name="flame" size={24} color="#FFF" style={{ marginRight: 10 }} />
+        <Animated.View style={[styles.toastContainer, isDarkMode && styles.darkToastContainer, { transform: [{ translateY: toastY }] }]}>
+          <Ionicons name="flame" size={24} color={isDarkMode ? "#000000" : "#FFF"} style={{ marginRight: 10 }} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.toastTitle}>Streak Maintained!</Text>
-            <Text style={styles.toastMessage}>Great job, you've already completed today's chanting and secured your streak.</Text>
+            <Text style={[styles.toastTitle, isDarkMode && styles.darkToastTitle]}>
+              {getTranslation(language, 'streakMaintained')}
+            </Text>
+            <Text style={[styles.toastMessage, isDarkMode && styles.darkToastMessage]}>
+              {getTranslation(language, 'streakToastMsg')}
+            </Text>
           </View>
         </Animated.View>
       )}
@@ -419,7 +437,7 @@ export default function App() {
                     width: p.size,
                     height: p.isCircle ? p.size : p.size * 1.5,
                     borderRadius: p.isCircle ? p.size / 2 : 2,
-                    backgroundColor: p.color,
+                    backgroundColor: isDarkMode ? '#FFFFFF' : p.color,
                     transform: [{ translateY }, { translateX }, { rotate }],
                   },
                 ]}
@@ -429,7 +447,7 @@ export default function App() {
 
           {/* Celebration Card */}
           <SafeAreaView style={styles.celebrationContent}>
-            <View style={styles.celebrationCard}>
+            <View style={[styles.celebrationCard, isDarkMode && styles.darkCelebrationCard]}>
               
               {/* Badge & Glow Container */}
               <View style={{ width: 150, height: 150, alignItems: 'center', justifyContent: 'center', marginBottom: 28, position: 'relative' }}>
@@ -438,6 +456,7 @@ export default function App() {
                 <Animated.View 
                   style={[
                     styles.glowRing,
+                    isDarkMode && styles.darkGlowRing,
                     {
                       transform: [
                         { scale: glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.95, 1.3] }) }
@@ -450,14 +469,17 @@ export default function App() {
                 <Animated.View 
                   style={[
                     styles.badgeGlow,
+                    isDarkMode && styles.darkBadgeGlow,
                     { transform: [{ scale: badgeScale }, { rotate: badgeRotateInterpolate }], marginBottom: 0 }
                   ]}
                 >
-                  <View style={styles.badgeCircle}>
+                  <View style={[styles.badgeCircle, isDarkMode && styles.darkBadgeCircle]}>
                     <Text style={styles.badgeEmoji}>🔥</Text>
                     <View style={styles.streakBadgeTextContainer}>
                       <Text style={styles.streakBadgeTextVal}>{currentStreak}</Text>
-                      <Text style={styles.streakBadgeTextLabel}>DAYS</Text>
+                      <Text style={[styles.streakBadgeTextLabel, isDarkMode && styles.darkStreakBadgeTextLabel]}>
+                        {getTranslation(language, 'days').toUpperCase()}
+                      </Text>
                     </View>
                   </View>
                 </Animated.View>
@@ -496,7 +518,7 @@ export default function App() {
                       <Svg width={s.size} height={s.size} viewBox="0 0 24 24" fill="none">
                         <Path 
                           d="M12 0L15.5 8.5L24 12L15.5 15.5L12 24L8.5 15.5L0 12L8.5 8.5L12 0Z" 
-                          fill="#FFD166" 
+                          fill={isDarkMode ? "#FFFFFF" : "#FFD166"} 
                         />
                       </Svg>
                     </Animated.View>
@@ -505,23 +527,31 @@ export default function App() {
 
               </View>
 
-              <Text style={styles.celebrationTitle}>🎉 Congratulations!</Text>
+              <Text style={[styles.celebrationTitle, isDarkMode && styles.darkCelebrationTitle]}>
+                {getTranslation(language, 'congratulations')}
+              </Text>
               
-              <Text style={styles.celebrationMessage}>
-                You have successfully completed today's chanting target and maintained your streak!
+              <Text style={[styles.celebrationMessage, isDarkMode && styles.darkCelebrationMessage]}>
+                {getTranslation(language, 'celebrationMsg')}
               </Text>
 
-              <View style={styles.streakHighlightBox}>
-                <Text style={styles.streakHighlightTitle}>CURRENT STREAK</Text>
-                <Text style={styles.streakHighlightVal}>{currentStreak} Days</Text>
+              <View style={[styles.streakHighlightBox, isDarkMode && styles.darkStreakHighlightBox]}>
+                <Text style={[styles.streakHighlightTitle, isDarkMode && styles.darkStreakHighlightTitle]}>
+                  {getTranslation(language, 'currentStreakUpper')}
+                </Text>
+                <Text style={[styles.streakHighlightVal, isDarkMode && styles.darkStreakHighlightVal]}>
+                  {currentStreak} {getTranslation(language, 'days')}
+                </Text>
               </View>
 
               <TouchableOpacity 
-                style={styles.continueButton} 
+                style={[styles.continueButton, isDarkMode && styles.darkContinueButton]} 
                 onPress={() => setShowCelebrationModal(false)}
                 activeOpacity={0.8}
               >
-                <Text style={styles.continueButtonText}>Continue</Text>
+                <Text style={[styles.continueButtonText, isDarkMode && styles.darkContinueButtonText]}>
+                  {getTranslation(language, 'continue')}
+                </Text>
               </TouchableOpacity>
             </View>
           </SafeAreaView>
@@ -730,5 +760,72 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  // Dark Mode Style Overrides
+  darkContainer: {
+    backgroundColor: '#000000',
+  },
+  darkTabContainer: {
+    backgroundColor: '#000000',
+    borderTopWidth: 1,
+    borderColor: '#222222',
+    shadowColor: '#000000',
+  },
+  darkToastContainer: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#FFFFFF',
+    shadowOpacity: 0.1,
+  },
+  darkToastTitle: {
+    color: '#000000',
+  },
+  darkToastMessage: {
+    color: '#555555',
+  },
+  darkCelebrationCard: {
+    backgroundColor: '#000000',
+    borderWidth: 1,
+    borderColor: '#222222',
+    shadowColor: '#000000',
+  },
+  darkGlowRing: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#FFFFFF',
+  },
+  darkBadgeGlow: {
+    backgroundColor: '#111111',
+    borderColor: '#333333',
+    shadowColor: '#FFFFFF',
+    shadowOpacity: 0.1,
+  },
+  darkBadgeCircle: {
+    backgroundColor: '#FFFFFF',
+  },
+  darkStreakBadgeTextLabel: {
+    color: '#000000',
+  },
+  darkCelebrationTitle: {
+    color: '#FFFFFF',
+  },
+  darkCelebrationMessage: {
+    color: '#8E8E8E',
+  },
+  darkStreakHighlightBox: {
+    backgroundColor: '#111111',
+    borderColor: '#222222',
+  },
+  darkStreakHighlightTitle: {
+    color: '#666666',
+  },
+  darkStreakHighlightVal: {
+    color: '#FFFFFF',
+  },
+  darkContinueButton: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#FFFFFF',
+    shadowOpacity: 0.1,
+  },
+  darkContinueButtonText: {
+    color: '#000000',
   },
 });

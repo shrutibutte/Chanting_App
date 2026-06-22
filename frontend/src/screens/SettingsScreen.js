@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, SafeAreaView, Switch, TouchableOpacity, Alert, 
 import { useStore } from '../store/useStore';
 import { Ionicons, Feather, MaterialIcons } from '@expo/vector-icons';
 import { requestNotificationPermissions, scheduleDailyReminder, cancelAllReminders } from '../utils/notifications';
+import { getTranslation } from '../utils/translations';
 
 export default function SettingsScreen() {
   const { 
@@ -12,7 +13,11 @@ export default function SettingsScreen() {
     setReminderSettings,
     dailyGoal,
     setDailyGoal,
-    totalCount
+    totalCount,
+    isDarkMode,
+    toggleDarkMode,
+    language,
+    setLanguage
   } = useStore();
 
   const [localTime, setLocalTime] = useState(() => {
@@ -29,13 +34,15 @@ export default function SettingsScreen() {
   const [isTimeModalVisible, setIsTimeModalVisible] = useState(false);
   const [tempTime, setTempTime] = useState('');
 
+  const [isLanguageModalVisible, setIsLanguageModalVisible] = useState(false);
+
   const handleToggleReminder = async (enabled) => {
     if (enabled) {
       const hasPermission = await requestNotificationPermissions();
       if (!hasPermission) {
         Alert.alert(
-          'Permission Required',
-          'Please enable notifications in your device settings to receive chanting reminders.'
+          getTranslation(language, 'permissionRequired'),
+          getTranslation(language, 'enableNotificationsAlert')
         );
         return;
       }
@@ -44,18 +51,18 @@ export default function SettingsScreen() {
         await scheduleDailyReminder(reminderTime);
         setReminderSettings(true, reminderTime);
         Alert.alert(
-          'Reminder On', 
-          `Daily Reminder set to ${formatDisplayTime(localTime)}.`
+          getTranslation(language, 'reminderOn'), 
+          getTranslation(language, 'reminderSetTo', { time: formatDisplayTime(localTime) })
         );
       } catch (err) {
-        Alert.alert('Error', 'Failed to schedule reminder. Please try again.');
+        Alert.alert(getTranslation(language, 'error'), 'Failed to schedule reminder. Please try again.');
       }
     } else {
       try {
         await cancelAllReminders();
         setReminderSettings(false, reminderTime);
       } catch (err) {
-        Alert.alert('Error', 'Failed to cancel reminder. Please try again.');
+        Alert.alert(getTranslation(language, 'error'), 'Failed to cancel reminder. Please try again.');
       }
     }
   };
@@ -79,8 +86,9 @@ export default function SettingsScreen() {
     if (!isNaN(goalNum) && goalNum > 0) {
       setDailyGoal(goalNum);
       setIsGoalModalVisible(false);
+      Alert.alert(getTranslation(language, 'success'), getTranslation(language, 'goalUpdated'));
     } else {
-      Alert.alert('Invalid Input', 'Please enter a valid number greater than 0.');
+      Alert.alert(getTranslation(language, 'invalidInput'), getTranslation(language, 'enterValidGoal'));
     }
   };
 
@@ -96,21 +104,24 @@ export default function SettingsScreen() {
         try {
           await scheduleDailyReminder(tempTime);
         } catch (err) {
-          Alert.alert('Error', 'Failed to update reminder time. Please try again.');
+          Alert.alert(getTranslation(language, 'error'), 'Failed to update reminder time. Please try again.');
         }
       }
 
       setReminderSettings(isReminderEnabled, tempTime);
       setIsTimeModalVisible(false);
+      Alert.alert(getTranslation(language, 'success'), getTranslation(language, 'reminderUpdated'));
     } else {
-      Alert.alert('Invalid Time', 'Please enter a valid time in 24-hour format (e.g. 08:30 or 15:00)');
+      Alert.alert(getTranslation(language, 'invalidTime'), getTranslation(language, 'enterValidTime'));
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, isDarkMode && styles.darkContainer]}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Settings</Text>
+        <Text style={[styles.headerTitle, isDarkMode && styles.darkHeaderTitle]}>
+          {getTranslation(language, 'settings')}
+        </Text>
       </View>
 
       <ScrollView 
@@ -119,9 +130,11 @@ export default function SettingsScreen() {
       >
         {/* JAAP SETTINGS */}
         <View style={styles.section}>
-          {/* <Text style={styles.sectionTitle}>JAAP SETTINGS</Text> */}
+          <Text style={[styles.sectionTitle, isDarkMode && styles.darkSectionTitle]}>
+            {getTranslation(language, 'jaapSettings')}
+          </Text>
           <TouchableOpacity 
-            style={styles.cardRow} 
+            style={[styles.cardRow, isDarkMode && styles.darkCardRow]} 
             activeOpacity={0.7} 
             onPress={() => {
               setTempGoal(dailyGoal ? dailyGoal.toString() : '108');
@@ -129,36 +142,44 @@ export default function SettingsScreen() {
             }}
           >
             <View style={styles.iconContainer}>
-               <Feather name="flag" size={20} color="#FF6B35" />
+               <Feather name="flag" size={20} color={isDarkMode ? "#FFFFFF" : "#FF6B35"} />
             </View>
             <View style={styles.cardTextContainer}>
-              <Text style={styles.cardTitle}>Daily Goal</Text>
-              <Text style={styles.cardSubtitle}>{dailyGoal || 108} counts</Text>
+              <Text style={[styles.cardTitle, isDarkMode && styles.darkCardTitle]}>
+                {getTranslation(language, 'dailyGoal')}
+              </Text>
+              <Text style={[styles.cardSubtitle, isDarkMode && styles.darkCardSubtitle]}>
+                {dailyGoal || 108} {getTranslation(language, 'counts')}
+              </Text>
             </View>
-            <MaterialIcons name="chevron-right" size={24} color="#A0A0A0" />
+            <MaterialIcons name="chevron-right" size={24} color={isDarkMode ? "#FFFFFF" : "#A0A0A0"} />
           </TouchableOpacity>
         </View>
 
         {/* REMINDERS */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>REMINDERS</Text>
-          <View style={styles.cardRow}>
+          <Text style={[styles.sectionTitle, isDarkMode && styles.darkSectionTitle]}>
+            {getTranslation(language, 'reminders')}
+          </Text>
+          <View style={[styles.cardRow, isDarkMode && styles.darkCardRow]}>
             <View style={styles.iconContainer}>
-              <Feather name="bell" size={20} color="#FF6B35" />
+              <Feather name="bell" size={20} color={isDarkMode ? "#FFFFFF" : "#FF6B35"} />
             </View>
             <View style={styles.cardTextContainer}>
-              <Text style={styles.cardTitle}>Daily Reminder</Text>
+              <Text style={[styles.cardTitle, isDarkMode && styles.darkCardTitle]}>
+                {getTranslation(language, 'dailyReminder')}
+              </Text>
               
               <TouchableOpacity onPress={handlePressTime}>
-                 <Text style={isReminderEnabled ? styles.cardSubtitleActive : styles.cardSubtitle}>
-                   Get notified at {formatDisplayTime(localTime)}
+                 <Text style={isReminderEnabled ? (isDarkMode ? styles.darkCardSubtitleActive : styles.cardSubtitleActive) : (isDarkMode ? styles.darkCardSubtitle : styles.cardSubtitle)}>
+                   {getTranslation(language, 'reminderSetTo', { time: formatDisplayTime(localTime) })}
                  </Text>
               </TouchableOpacity>
             </View>
             <Switch
-              trackColor={{ false: '#F0F0F0', true: '#FFDDC8' }}
-              thumbColor={isReminderEnabled ? '#00BFA5' : '#FFFFFF'}
-              ios_backgroundColor="#F0F0F0"
+              trackColor={{ false: isDarkMode ? '#222222' : '#F0F0F0', true: isDarkMode ? '#FFFFFF' : '#FFDDC8' }}
+              thumbColor={isReminderEnabled ? (isDarkMode ? '#FFFFFF' : '#00BFA5') : '#FFFFFF'}
+              ios_backgroundColor={isDarkMode ? '#222222' : '#F0F0F0'}
               onValueChange={handleToggleReminder}
               value={isReminderEnabled}
               style={{ transform: [{ scaleX: 0.9 }, { scaleY: 0.9 }] }}
@@ -166,13 +187,70 @@ export default function SettingsScreen() {
           </View>
         </View> 
 
-          {/*  Count*/}
-          <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Count</Text>
-          <View style={styles.cardRow}>
+        {/* THEME */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, isDarkMode && styles.darkSectionTitle]}>
+            {getTranslation(language, 'theme')}
+          </Text>
+          <View style={[styles.cardRow, isDarkMode && styles.darkCardRow]}>
+            <View style={styles.iconContainer}>
+              <Feather name="moon" size={20} color={isDarkMode ? "#FFFFFF" : "#FF6B35"} />
+            </View>
+            <View style={styles.cardTextContainer}>
+              <Text style={[styles.cardTitle, isDarkMode && styles.darkCardTitle]}>
+                {getTranslation(language, 'darkMode')}
+              </Text>
+              <Text style={[styles.cardSubtitle, isDarkMode && styles.darkCardSubtitle]}>
+                {getTranslation(language, 'blackWhiteTheme')}
+              </Text>
+            </View>
+            <Switch
+              trackColor={{ false: isDarkMode ? '#222222' : '#F0F0F0', true: isDarkMode ? '#FFFFFF' : '#FFDDC8' }}
+              thumbColor={isDarkMode ? '#FFFFFF' : '#FFFFFF'}
+              ios_backgroundColor={isDarkMode ? '#222222' : '#F0F0F0'}
+              onValueChange={toggleDarkMode}
+              value={isDarkMode}
+              style={{ transform: [{ scaleX: 0.9 }, { scaleY: 0.9 }] }}
+            />
+          </View>
+        </View>
+
+        {/* LANGUAGE */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, isDarkMode && styles.darkSectionTitle]}>
+            {getTranslation(language, 'language')}
+          </Text>
+          <TouchableOpacity 
+            style={[styles.cardRow, isDarkMode && styles.darkCardRow]} 
+            activeOpacity={0.7} 
+            onPress={() => setIsLanguageModalVisible(true)}
+          >
+            <View style={styles.iconContainer}>
+               <Ionicons name="globe-outline" size={20} color={isDarkMode ? "#FFFFFF" : "#FF6B35"} />
+            </View>
+            <View style={styles.cardTextContainer}>
+              <Text style={[styles.cardTitle, isDarkMode && styles.darkCardTitle]}>
+                {getTranslation(language, 'languageOption')}
+              </Text>
+              <Text style={[styles.cardSubtitle, isDarkMode && styles.darkCardSubtitle]}>
+                {language === 'hi' ? 'हिन्दी (Hindi)' : language === 'mr' ? 'मराठी (Marathi)' : 'English'}
+              </Text>
+            </View>
+            <MaterialIcons name="chevron-right" size={24} color={isDarkMode ? "#FFFFFF" : "#A0A0A0"} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Count */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, isDarkMode && styles.darkSectionTitle]}>
+            {getTranslation(language, 'Total Jaap')}
+          </Text>
+          <View style={[styles.cardRow, isDarkMode && styles.darkCardRow]}>
             <View style={styles.aboutTextContainer}>
-              <Text style={styles.aboutTitle}>Total Jaap</Text>
-              <Text style={styles.countSubtitle}>
+              {/* <Text style={[styles.aboutTitle, isDarkMode && styles.darkAboutTitle]}>
+                {getTranslation(language, 'Total Jaap')}
+              </Text> */}
+              <Text style={[styles.countSubtitle, isDarkMode && styles.darkCountSubtitle]}>
                 {totalCount}
               </Text>
             </View>
@@ -181,26 +259,31 @@ export default function SettingsScreen() {
 
         {/* ABOUT */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>ABOUT</Text>
-          <View style={[styles.cardRow, styles.aboutCard]}>
+          <Text style={[styles.sectionTitle, isDarkMode && styles.darkSectionTitle]}>
+            {getTranslation(language, 'about')}
+          </Text>
+          <View style={[styles.cardRow, styles.aboutCard, isDarkMode && styles.darkCardRow]}>
             <View style={styles.aboutTextContainer}>
-              <Text style={styles.aboutTitle}>Naam Jaap</Text>
-              <Text style={styles.aboutDescription}>
-                A spiritual app for Hindu devotional chanting. 
-                Track your jaap, maintain streaks, and deepen your spiritual practice.
+              <Text style={[styles.aboutTitle, isDarkMode && styles.darkAboutTitle]}>
+                {getTranslation(language, 'appName')}
               </Text>
-              <Text style={styles.aboutVersion}>Version 1.0.0</Text>
+              <Text style={[styles.aboutDescription, isDarkMode && styles.darkAboutDescription]}>
+                {getTranslation(language, 'naamJaapDesc')}
+              </Text>
+              <Text style={[styles.aboutVersion, isDarkMode && styles.darkAboutVersion]}>
+                {getTranslation(language, 'version')} 1.0.0
+              </Text>
             </View>
           </View>
         </View>
 
-    
         {/* LOGOUT BUTTON */}
-        
-        <View style={styles.cardRow}>
+        <View style={[styles.cardRow, isDarkMode && styles.darkCardRow]}>
            <TouchableOpacity style={styles.logoutButton} onPress={logout}>
-             <Ionicons name="log-out-outline" size={20} color="#FF6B35" style={{ marginRight: 8 }} />
-             <Text style={styles.logoutText}>Logout</Text>
+             <Ionicons name="log-out-outline" size={20} color={isDarkMode ? "#FFFFFF" : "#FF6B35"} style={{ marginRight: 8 }} />
+             <Text style={[styles.logoutText, isDarkMode && styles.darkLogoutText]}>
+               {getTranslation(language, 'logout')}
+             </Text>
            </TouchableOpacity>
         </View>
       </ScrollView>
@@ -212,21 +295,28 @@ export default function SettingsScreen() {
         animationType="fade"
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Set Daily Goal</Text>
+          <View style={[styles.modalContent, isDarkMode && styles.darkModalContent]}>
+            <Text style={[styles.modalTitle, isDarkMode && styles.darkModalTitle]}>
+              {getTranslation(language, 'setDailyGoal')}
+            </Text>
             <TextInput
-              style={styles.modalInput}
+              style={[styles.modalInput, isDarkMode && styles.darkModalInput]}
               value={tempGoal}
               onChangeText={setTempGoal}
               keyboardType="numeric"
-              placeholder="e.g. 108"
+              placeholder={getTranslation(language, 'enterTargetNumber')}
+              placeholderTextColor={isDarkMode ? "#666" : "#A0A0A0"}
             />
             <View style={styles.modalButtons}>
-              <TouchableOpacity style={styles.modalBtnCancel} onPress={() => setIsGoalModalVisible(false)}>
-                <Text style={styles.modalBtnCancelText}>Cancel</Text>
+              <TouchableOpacity style={[styles.modalBtnCancel, isDarkMode && styles.darkModalBtnCancel]} onPress={() => setIsGoalModalVisible(false)}>
+                <Text style={[styles.modalBtnCancelText, isDarkMode && styles.darkModalBtnCancelText]}>
+                  {getTranslation(language, 'cancel')}
+                </Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.modalBtnSave} onPress={handleSaveGoal}>
-                <Text style={styles.modalBtnSaveText}>Save</Text>
+              <TouchableOpacity style={[styles.modalBtnSave, isDarkMode && styles.darkModalBtnSave]} onPress={handleSaveGoal}>
+                <Text style={[styles.modalBtnSaveText, isDarkMode && styles.darkModalBtnSaveText]}>
+                  {getTranslation(language, 'save')}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -240,25 +330,90 @@ export default function SettingsScreen() {
         animationType="fade"
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Set Reminder Time</Text>
-            <Text style={{color: '#888', marginBottom: 16, fontSize: 13}}>Enter time in 24-hour format (HH:mm)</Text>
+          <View style={[styles.modalContent, isDarkMode && styles.darkModalContent]}>
+            <Text style={[styles.modalTitle, isDarkMode && styles.darkModalTitle]}>
+              {getTranslation(language, 'setReminderTime')}
+            </Text>
+            <Text style={[{color: '#888', marginBottom: 16, fontSize: 13}, isDarkMode && styles.darkCardSubtitle]}>
+              {getTranslation(language, 'enterTimeFormat')}
+            </Text>
             <TextInput
-              style={styles.modalInput}
+              style={[styles.modalInput, isDarkMode && styles.darkModalInput]}
               value={tempTime}
               onChangeText={setTempTime}
               keyboardType="numbers-and-punctuation"
-              placeholder="e.g. 08:00 or 15:30"
+              placeholder="e.g. 08:00"
+              placeholderTextColor={isDarkMode ? "#666" : "#A0A0A0"}
               maxLength={5}
             />
             <View style={styles.modalButtons}>
-              <TouchableOpacity style={styles.modalBtnCancel} onPress={() => setIsTimeModalVisible(false)}>
-                <Text style={styles.modalBtnCancelText}>Cancel</Text>
+              <TouchableOpacity style={[styles.modalBtnCancel, isDarkMode && styles.darkModalBtnCancel]} onPress={() => setIsTimeModalVisible(false)}>
+                <Text style={[styles.modalBtnCancelText, isDarkMode && styles.darkModalBtnCancelText]}>
+                  {getTranslation(language, 'cancel')}
+                </Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.modalBtnSave} onPress={handleSaveTime}>
-                <Text style={styles.modalBtnSaveText}>Save</Text>
+              <TouchableOpacity style={[styles.modalBtnSave, isDarkMode && styles.darkModalBtnSave]} onPress={handleSaveTime}>
+                <Text style={[styles.modalBtnSaveText, isDarkMode && styles.darkModalBtnSaveText]}>
+                  {getTranslation(language, 'save')}
+                </Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Language Selection Modal */}
+      <Modal
+        visible={isLanguageModalVisible}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, isDarkMode && styles.darkModalContent]}>
+            <Text style={[styles.modalTitle, isDarkMode && styles.darkModalTitle]}>
+              {getTranslation(language, 'selectLanguage')}
+            </Text>
+            
+            <TouchableOpacity 
+              style={[styles.langSelectBtn, language === 'en' && (isDarkMode ? styles.langSelectBtnActiveDark : styles.langSelectBtnActive)]}
+              onPress={() => {
+                setLanguage('en');
+                setIsLanguageModalVisible(false);
+              }}
+            >
+              <Text style={[styles.langSelectText, isDarkMode && styles.darkCardTitle, language === 'en' && styles.langSelectTextActive]}>English</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.langSelectBtn, language === 'hi' && (isDarkMode ? styles.langSelectBtnActiveDark : styles.langSelectBtnActive)]}
+              onPress={() => {
+                setLanguage('hi');
+                setIsLanguageModalVisible(false);
+              }}
+            >
+              <Text style={[styles.langSelectText, isDarkMode && styles.darkCardTitle, language === 'hi' && styles.langSelectTextActive]}>हिन्दी (Hindi)</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.langSelectBtn, language === 'mr' && (isDarkMode ? styles.langSelectBtnActiveDark : styles.langSelectBtnActive)]}
+              onPress={() => {
+                setLanguage('mr');
+                setIsLanguageModalVisible(false);
+              }}
+            >
+              <Text style={[styles.langSelectText, isDarkMode && styles.darkCardTitle, language === 'mr' && styles.langSelectTextActive]}>मराठी (Marathi)</Text>
+            </TouchableOpacity>
+
+            <View style={{ height: 16 }} />
+
+            <TouchableOpacity 
+              style={[styles.modalBtnCancel, isDarkMode && styles.darkModalBtnCancel, { width: '100%' }]} 
+              onPress={() => setIsLanguageModalVisible(false)}
+            >
+              <Text style={[styles.modalBtnCancelText, isDarkMode && styles.darkModalBtnCancelText]}>
+                {getTranslation(language, 'cancel')}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -332,7 +487,7 @@ const styles = StyleSheet.create({
     color: '#A0A0A0',
   },
    countSubtitle: {
-    fontSize: 13,
+    fontSize: 15,
     color: '#333333',
     fontWeight: 'bold',
   },
@@ -439,5 +594,103 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FFF',
+  },
+  // Dark Mode Styles
+  darkContainer: {
+    backgroundColor: '#000000',
+  },
+  darkHeaderTitle: {
+    color: '#FFFFFF',
+  },
+  darkSectionTitle: {
+    color: '#8E8E8E',
+  },
+  darkCardRow: {
+    backgroundColor: '#000000',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  darkCardTitle: {
+    color: '#FFFFFF',
+  },
+  darkCardSubtitle: {
+    color: '#8E8E8E',
+  },
+  darkCardSubtitleActive: {
+    fontSize: 13,
+    color: '#FFFFFF',
+    textDecorationLine: 'underline',
+  },
+  darkAboutTitle: {
+    color: '#FFFFFF',
+  },
+  darkAboutDescription: {
+    color: '#CCCCCC',
+  },
+  darkAboutVersion: {
+    color: '#8E8E8E',
+  },
+  darkCountSubtitle: {
+    fontSize: 15,
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+  },
+  darkLogoutText: {
+    color: '#FFFFFF',
+  },
+  darkModalContent: {
+    backgroundColor: '#000000',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+  },
+  darkModalTitle: {
+    color: '#FFFFFF',
+  },
+  darkModalInput: {
+    backgroundColor: '#000000',
+    borderColor: '#FFFFFF',
+    color: '#FFFFFF',
+  },
+  darkModalBtnCancel: {
+    backgroundColor: '#333333',
+  },
+  darkModalBtnCancelText: {
+    color: '#FFFFFF',
+  },
+  darkModalBtnSave: {
+    backgroundColor: '#FFFFFF',
+  },
+  darkModalBtnSaveText: {
+    color: '#000000',
+  },
+  langSelectBtn: {
+    width: '100%',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E0D6CB',
+    alignItems: 'center',
+    marginBottom: 10,
+    backgroundColor: '#FFFFFF',
+  },
+  langSelectBtnActive: {
+    borderColor: '#FF6B35',
+    backgroundColor: '#FFF2E6',
+  },
+  langSelectBtnActiveDark: {
+    borderColor: '#FFFFFF',
+    backgroundColor: '#111111',
+  },
+  langSelectText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333333',
+  },
+  langSelectTextActive: {
+    fontWeight: 'bold',
+    color: '#FF6B35',
   },
 });

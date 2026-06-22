@@ -2,9 +2,11 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { useStore } from '../store/useStore';
+import { getLocalDateString } from '../utils/date.js';
+import { getTranslation } from '../utils/translations';
 
 export default function StreakScreen({onExit}) {
-  const { historyRecords, todayCount } = useStore();
+  const { historyRecords, todayCount, isDarkMode, language } = useStore();
   const [currentMonthDate, setCurrentMonthDate] = useState(new Date());
 
   const { groupedByDate, currentStreak, bestStreak, weekTicks } = useMemo(() => {
@@ -14,7 +16,7 @@ export default function StreakScreen({onExit}) {
     });
 
     const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = getLocalDateString(today);
     grouped[todayStr] = todayCount;
 
     // Calculate Best Streak
@@ -47,18 +49,18 @@ export default function StreakScreen({onExit}) {
     // Calculate Current Streak
     let streak = 0;
     let checkDate = new Date();
-    let cDateStr = checkDate.toISOString().split('T')[0];
+    let cDateStr = getLocalDateString(checkDate);
     
     // If today is 0, start checking yesterday
     if (!grouped[cDateStr] || grouped[cDateStr] === 0) {
       checkDate.setDate(checkDate.getDate() - 1);
-      cDateStr = checkDate.toISOString().split('T')[0];
+      cDateStr = getLocalDateString(checkDate);
     }
     
     while (grouped[cDateStr] > 0) {
       streak++;
       checkDate.setDate(checkDate.getDate() - 1);
-      cDateStr = checkDate.toISOString().split('T')[0];
+      cDateStr = getLocalDateString(checkDate);
     }
 
     if (streak > best) best = streak;
@@ -72,12 +74,20 @@ export default function StreakScreen({onExit}) {
     mondayDate.setDate(today.getDate() + diffToMonday);
     
     const weekArr = [];
-    const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const dayNames = [
+      getTranslation(language, 'mon'),
+      getTranslation(language, 'tue'),
+      getTranslation(language, 'wed'),
+      getTranslation(language, 'thu'),
+      getTranslation(language, 'fri'),
+      getTranslation(language, 'sat'),
+      getTranslation(language, 'sun')
+    ];
     
     for (let i = 0; i < 7; i++) {
       const d = new Date(mondayDate);
       d.setDate(mondayDate.getDate() + i);
-      const dateStr = d.toISOString().split('T')[0];
+      const dateStr = getLocalDateString(d);
       
       weekArr.push({
         label: dayNames[i],
@@ -113,9 +123,7 @@ export default function StreakScreen({onExit}) {
     for (let i = 1; i <= daysInMonth; i++) {
       // Create local date string YYYY-MM-DD
       const d = new Date(year, month, i);
-      // Adjust timezone offset to get correct ISO string date
-      d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-      const dateStr = d.toISOString().split('T')[0];
+      const dateStr = getLocalDateString(d);
       
       days.push({
         dayNumber: i,
@@ -134,63 +142,77 @@ export default function StreakScreen({onExit}) {
     setCurrentMonthDate(new Date(currentMonthDate.setMonth(currentMonthDate.getMonth() - 1)));
   };
 
-  const monthName = currentMonthDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+  const locale = language === 'hi' ? 'hi-IN' : language === 'mr' ? 'mr-IN' : 'en-US';
+  const monthName = currentMonthDate.toLocaleString(locale, { month: 'long', year: 'numeric' });
   const calDays = generateCalendarDays();
-  const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const dayHeaders = [
+    getTranslation(language, 'sun'),
+    getTranslation(language, 'mon'),
+    getTranslation(language, 'tue'),
+    getTranslation(language, 'wed'),
+    getTranslation(language, 'thu'),
+    getTranslation(language, 'fri'),
+    getTranslation(language, 'sat')
+  ];
  const handleExit = () => {
     // Trigger batch sync immediately upon exiting the counter screen
     onExit();
   };
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, isDarkMode && styles.darkContainer]}>
       <View style={styles.header}>
         {/* back button  */}
-        <TouchableOpacity style={styles.exitButton} onPress={handleExit}>
-          <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF6B35" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <TouchableOpacity style={[styles.exitButton, isDarkMode && styles.darkExitButton]} onPress={handleExit}>
+          <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={isDarkMode ? "#FFFFFF" : "#FF6B35"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <Path d="M9 14L4 9l5-5" />
             <Path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11" />
           </Svg>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Streak</Text>
+        <Text style={[styles.headerTitle, isDarkMode && styles.darkHeaderTitle]}>{getTranslation(language, 'streak')}</Text>
       </View>
       <ScrollView contentContainerStyle={styles.scroll}>
         
         {/* Streak Row */}
         <View style={styles.streakRow}>
           {/* Current Streak Card */}
-          <View style={[styles.streakBox, styles.currentStreakBox]}>
+          <View style={[styles.streakBox, styles.currentStreakBox, isDarkMode && styles.darkCurrentStreakBox]}>
             <View style={styles.streakBoxHeader}>
               <Text style={styles.flameIcon}>🔥</Text>
-              <Text style={styles.currentStreakTitle}>Current</Text>
+              <Text style={[styles.currentStreakTitle, isDarkMode && styles.darkStreakTitle]}>{getTranslation(language, 'current')}</Text>
             </View>
-            <Text style={styles.currentStreakNumber}>{currentStreak}</Text>
-            <Text style={styles.currentStreakDays}>days</Text>
+            <Text style={[styles.currentStreakNumber, isDarkMode && styles.darkStreakNumber]}>{currentStreak}</Text>
+            <Text style={[styles.currentStreakDays, isDarkMode && styles.darkStreakDays]}>{getTranslation(language, 'days')}</Text>
           </View>
 
           {/* Best Streak Card */}
-          <View style={[styles.streakBox, styles.bestStreakBox]}>
+          <View style={[styles.streakBox, styles.bestStreakBox, isDarkMode && styles.darkBestStreakBox]}>
             <View style={styles.streakBoxHeader}>
               <Text style={styles.trophyIcon}>🏆</Text>
-              <Text style={styles.bestStreakTitle}>Best</Text>
+              <Text style={[styles.bestStreakTitle, isDarkMode && styles.darkBestStreakTitle]}>{getTranslation(language, 'best')}</Text>
             </View>
-            <Text style={styles.bestStreakNumber}>{bestStreak}</Text>
-            <Text style={styles.bestStreakDays}>days</Text>
+            <Text style={[styles.bestStreakNumber, isDarkMode && styles.darkBestStreakNumber]}>{bestStreak}</Text>
+            <Text style={[styles.bestStreakDays, isDarkMode && styles.darkBestStreakDays]}>{getTranslation(language, 'days')}</Text>
           </View>
         </View>
 
         {/* This Week Card */}
-        <View style={styles.card}>
-          <Text style={styles.cardHeader}>🔥 This Week</Text>
+        <View style={[styles.card, isDarkMode && styles.darkCard]}>
+          <Text style={[styles.cardHeader, isDarkMode && styles.darkCardHeader]}>🔥 {getTranslation(language, 'thisWeek')}</Text>
 
           <View style={styles.ticksContainer}>
             {weekTicks.map((tick, index) => (
               <View key={index} style={styles.tickCol}>
-                <Text style={styles.tickLabel}>{tick.label}</Text>
-                <View style={[styles.tickCircle, tick.active ? styles.tickActive : styles.tickInactive]}>
+                <Text style={[styles.tickLabel, isDarkMode && styles.darkTickLabel]}>{tick.label}</Text>
+                <View style={[
+                  styles.tickCircle, 
+                  tick.active 
+                    ? (isDarkMode ? styles.darkTickActive : styles.tickActive) 
+                    : (isDarkMode ? styles.darkTickInactive : styles.tickInactive)
+                ]}>
                   {tick.active ? (
-                    <Text style={styles.tickCheck}>✓</Text>
+                    <Text style={[styles.tickCheck, isDarkMode && styles.darkTickCheck]}>✓</Text>
                   ) : (
-                    <Text style={styles.tickClock}>◷</Text>
+                    <Text style={[styles.tickClock, isDarkMode && styles.darkTickClock]}>◷</Text>
                   )}
                 </View>
               </View>
@@ -198,20 +220,20 @@ export default function StreakScreen({onExit}) {
           </View>
 
           {/* Motivational Footer */}
-          <View style={styles.motivationalBox}>
-            <Text style={styles.motivationalText}>🔥 Keep up your daily chanting streak! 🔥</Text>
+          <View style={[styles.motivationalBox, isDarkMode && styles.darkMotivationalBox]}>
+            <Text style={[styles.motivationalText, isDarkMode && styles.darkMotivationalText]}>🔥 {getTranslation(language, 'keepStreak')} 🔥</Text>
           </View>
         </View>
 
         {/* Calendar Card */}
-        <View style={styles.card}>
+        <View style={[styles.card, isDarkMode && styles.darkCard]}>
           <View style={styles.calendarHeader}>
-            <TouchableOpacity onPress={prevMonth} style={styles.navButton}>
-              <Text style={styles.navButtonText}>{'<'}</Text>
+            <TouchableOpacity onPress={prevMonth} style={[styles.navButton, isDarkMode && styles.darkNavButton]}>
+              <Text style={[styles.navButtonText, isDarkMode && styles.darkNavButtonText]}>{'<'}</Text>
             </TouchableOpacity>
-            <Text style={styles.calendarTitle}>{monthName}</Text>
-            <TouchableOpacity onPress={nextMonth} style={styles.navButton}>
-              <Text style={styles.navButtonText}>{'>'}</Text>
+            <Text style={[styles.calendarTitle, isDarkMode && styles.darkCalendarTitle]}>{monthName}</Text>
+            <TouchableOpacity onPress={nextMonth} style={[styles.navButton, isDarkMode && styles.darkNavButton]}>
+              <Text style={[styles.navButtonText, isDarkMode && styles.darkNavButtonText]}>{'>'}</Text>
             </TouchableOpacity>
           </View>
 
@@ -219,7 +241,7 @@ export default function StreakScreen({onExit}) {
             {/* Days of week */}
             {dayHeaders.map((day, idx) => (
               <View key={idx} style={styles.calHeaderCell}>
-                <Text style={styles.calHeaderText}>{day}</Text>
+                <Text style={[styles.calHeaderText, isDarkMode && styles.darkCalHeaderText]}>{day}</Text>
               </View>
             ))}
             
@@ -227,8 +249,18 @@ export default function StreakScreen({onExit}) {
             {calDays.map((dayObj, idx) => (
               <View key={idx} style={styles.calDayCell}>
                 {dayObj ? (
-                  <View style={[styles.calDayCircle, dayObj.active && styles.calDayActive]}>
-                    <Text style={[styles.calDayText, dayObj.active && styles.calDayTextActive]}>
+                  <View style={[
+                    styles.calDayCircle, 
+                    dayObj.active 
+                      ? (isDarkMode ? styles.darkCalDayActive : styles.calDayActive)
+                      : null
+                  ]}>
+                    <Text style={[
+                      styles.calDayText, 
+                      isDarkMode && styles.darkCalDayText,
+                      dayObj.active && styles.calDayTextActive,
+                      dayObj.active && isDarkMode && styles.darkCalDayTextActive
+                    ]}>
                       {dayObj.dayNumber}
                     </Text>
                   </View>
@@ -238,10 +270,9 @@ export default function StreakScreen({onExit}) {
           </View>
         </View>
 
-
       </ScrollView>
     </SafeAreaView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -481,5 +512,100 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 13,
     textAlign: 'center',
+  },
+  // Dark Mode Styles
+  darkContainer: {
+    backgroundColor: '#000000',
+  },
+  darkExitButton: {
+    borderColor: '#FFFFFF',
+    backgroundColor: '#000000',
+  },
+  darkHeaderTitle: {
+    color: '#FFFFFF',
+  },
+  darkCurrentStreakBox: {
+    backgroundColor: '#000000',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+  },
+  darkBestStreakBox: {
+    backgroundColor: '#000000',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+  },
+  darkStreakTitle: {
+    color: '#FFFFFF',
+  },
+  darkBestStreakTitle: {
+    color: '#FFFFFF',
+  },
+  darkStreakNumber: {
+    color: '#FFFFFF',
+  },
+  darkBestStreakNumber: {
+    color: '#FFFFFF',
+  },
+  darkStreakDays: {
+    color: '#8E8E8E',
+  },
+  darkBestStreakDays: {
+    color: '#8E8E8E',
+  },
+  darkCard: {
+    backgroundColor: '#000000',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+  },
+  darkCardHeader: {
+    color: '#FFFFFF',
+  },
+  darkTickLabel: {
+    color: '#8E8E8E',
+  },
+  darkTickActive: {
+    backgroundColor: '#FFFFFF',
+  },
+  darkTickInactive: {
+    backgroundColor: '#111111',
+    borderWidth: 1,
+    borderColor: '#333333',
+  },
+  darkTickCheck: {
+    color: '#000000',
+  },
+  darkTickClock: {
+    color: '#666666',
+  },
+  darkMotivationalBox: {
+    backgroundColor: '#000000',
+    borderColor: '#FFFFFF',
+  },
+  darkMotivationalText: {
+    color: '#FFFFFF',
+  },
+  darkNavButton: {
+    backgroundColor: '#111111',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+  },
+  darkNavButtonText: {
+    color: '#FFFFFF',
+  },
+  darkCalendarTitle: {
+    color: '#FFFFFF',
+  },
+  darkCalHeaderText: {
+    color: '#8E8E8E',
+  },
+  darkCalDayActive: {
+    backgroundColor: '#FFFFFF',
+  },
+  darkCalDayText: {
+    color: '#FFFFFF',
+  },
+  darkCalDayTextActive: {
+    color: '#000000',
+    fontWeight: 'bold',
   },
 });

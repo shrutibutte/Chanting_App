@@ -7,11 +7,12 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  records   ChantRecord[]
+  id          String   @id @default(uuid())
+  email       String   @unique
+  name        String?
+  createdAt   DateTime @default(now())
+  records     ChantRecord[]
+  customNaams CustomNaam[]
 }
 
 model ChantRecord {
@@ -23,4 +24,14 @@ model ChantRecord {
   date      String   // YYYY-MM-DD for simpler daily aggregation
   
   @@index([userId, date])
+}
+
+model CustomNaam {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  name      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }

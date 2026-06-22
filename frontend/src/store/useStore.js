@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getLocalDateString } from '../utils/date.js';
 
 export const JOURNEY_LEVELS = [
   { name: "Devotion Seeker", minCount: 0, icon: "🌱" },
@@ -98,12 +99,49 @@ export const useStore = create(
 
       // Reminder Settings
       isReminderEnabled: true,
-      reminderTime: "08:00", // "HH:mm" format 24-hour style
+      reminderTime: "05:30", // "HH:mm" format 24-hour style
       setReminderSettings: (enabled, time) => set({ isReminderEnabled: enabled, reminderTime: time }),
 
       // Daily Goal
       dailyGoal: 108,
       setDailyGoal: (goal) => set({ dailyGoal: goal }),
+
+      // Theme Mode
+      isDarkMode: false,
+      toggleDarkMode: () => set((state) => ({ isDarkMode: !state.isDarkMode })),
+
+      // Language
+      language: 'en',
+      setLanguage: (lang) => set({ language: lang }),
+
+      // Custom Naams
+      customNaams: [],
+      fetchCustomNaams: async () => {
+        try {
+          const { apiCall } = require('../api/client');
+          const data = await apiCall('/custom-naams', 'GET');
+          if (data && data.success) {
+            set({ customNaams: data.naams || [] });
+          }
+        } catch (err) {
+          console.log("Failed to fetch custom naams", err.message);
+        }
+      },
+      addCustomNaam: async (name) => {
+        try {
+          const { apiCall } = require('../api/client');
+          const data = await apiCall('/custom-naams', 'POST', { name });
+          if (data && data.success) {
+            set((state) => ({
+              customNaams: [...state.customNaams, data.naam]
+            }));
+            return data.naam;
+          }
+        } catch (err) {
+          console.log("Failed to add custom naam", err.message);
+          throw err;
+        }
+      },
 
       // Celebration and Streak Popup tracking
       lastCelebrationDate: null,
@@ -120,15 +158,47 @@ export const useStore = create(
 
       // Authentication
       login: (token, emailAddr) => set({ userToken: token, email: emailAddr }),
-      logout: () => set({ userToken: null, email: null, totalCount: 0, todayCount: 0, unsyncedTaps: 0, sessionCount: 0, historyRecords: [] }),
+      logout: () => set({ 
+        userToken: null, 
+        email: null, 
+        totalCount: 0, 
+        todayCount: 0, 
+        unsyncedTaps: 0, 
+        sessionCount: 0, 
+        lastSyncDate: null,
+        historyRecords: [],
+        lastUnlockedLevel: 0,
+        showLevelModal: false,
+        unlockedLevelInfo: null,
+        lastCelebrationDate: null,
+        lastStreakMaintainedPopupDate: null,
+        customNaams: []
+      }),
 
       // Session logic
       resetSession: () => set({ sessionCount: 0 }),
 
+      // Daily Reset Check
+      checkDailyReset: () => {
+        const currentDate = getLocalDateString();
+        const state = get();
+        if (state.lastSyncDate && state.lastSyncDate !== currentDate) {
+          set({
+            todayCount: 0,
+            lastSyncDate: currentDate,
+            sessionCount: 0
+          });
+          return true;
+        } else if (!state.lastSyncDate) {
+          set({ lastSyncDate: currentDate });
+        }
+        return false;
+      },
+
       // Manual logging logic
       addManualCount: (countToAdd) => {
         if (countToAdd <= 0) return;
-        const currentDate = new Date().toISOString().split('T')[0];
+        const currentDate = getLocalDateString();
         set((state) => {
           const isNewDay = state.lastSyncDate !== currentDate;
           const nextTodayCount = isNewDay ? countToAdd : state.todayCount + countToAdd;
@@ -169,7 +239,7 @@ export const useStore = create(
 
       // Chanting logic
       incrementTap: () => {
-        const currentDate = new Date().toISOString().split('T')[0];
+        const currentDate = getLocalDateString();
         set((state) => {
           // If a new day started, reset todayCount locally
           const isNewDay = state.lastSyncDate !== currentDate;
@@ -227,6 +297,7 @@ export const useStore = create(
           totalCount: total, 
           todayCount: today,
           historyRecords: records,
+          lastSyncDate: getLocalDateString(),
           lastUnlockedLevel: Math.max(state.lastUnlockedLevel, currentLevelInfo.levelIndex)
         };
       }),
@@ -234,6 +305,13 @@ export const useStore = create(
     {
       name: 'naam-jaap-storage', 
       storage: createJSONStorage(() => AsyncStorage),
+      onRehydrateStorage: (state) => {
+        return (state, error) => {
+          if (state && !error) {
+            state.checkDailyReset();
+          }
+        };
+      }
     }
   )
 );

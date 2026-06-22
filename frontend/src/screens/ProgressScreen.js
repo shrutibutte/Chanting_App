@@ -3,11 +3,13 @@ import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Dim
 import { Ionicons } from '@expo/vector-icons';
 import { useStore } from '../store/useStore';
 import { LineChart } from 'react-native-chart-kit';
+import { getLocalDateString } from '../utils/date.js';
+import { getTranslation } from '../utils/translations';
 
 const screenWidth = Dimensions.get('window').width;
 
 export default function ProgressScreen() {
-  const { historyRecords, todayCount, dailyGoal } = useStore();
+  const { historyRecords, todayCount, dailyGoal, isDarkMode, language } = useStore();
   const [timeRange, setTimeRange] = useState('weekly'); // 'weekly', 'monthly', 'yearly'
   const [offset, setOffset] = useState(0);
   const [activeView, setActiveView] = useState('chart'); // 'chart', 'history'
@@ -26,9 +28,10 @@ export default function ProgressScreen() {
     });
 
     const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = getLocalDateString(today);
     groupedByDate[todayStr] = todayCount;
 
+    const locale = language === 'hi' ? 'hi-IN' : language === 'mr' ? 'mr-IN' : 'en-US';
     let chartLabels = [];
     let chartData = [];
     let dText = '';
@@ -43,15 +46,15 @@ export default function ProgressScreen() {
       const startDate = new Date(endDate);
       startDate.setDate(startDate.getDate() - 6);
 
-      dText = `${startDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })} - ${endDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}`;
+      dText = `${startDate.toLocaleDateString(locale, { day: 'numeric', month: 'short' })} - ${endDate.toLocaleDateString(locale, { day: 'numeric', month: 'short' })}`;
 
       // Chronological for chart (oldest to newest)
       for (let i = 6; i >= 0; i--) {
         const d = new Date(endDate);
         d.setDate(d.getDate() - i);
-        const dateStr = d.toISOString().split('T')[0];
+        const dateStr = getLocalDateString(d);
         const count = groupedByDate[dateStr] || 0;
-        chartLabels.push(d.toLocaleDateString('en-US', { weekday: 'short' }));
+        chartLabels.push(d.toLocaleDateString(locale, { weekday: 'short' }));
         chartData.push(count);
         total += count;
       }
@@ -60,11 +63,11 @@ export default function ProgressScreen() {
       for (let i = 0; i < 7; i++) {
         const d = new Date(endDate);
         d.setDate(d.getDate() - i);
-        const dateStr = d.toISOString().split('T')[0];
+        const dateStr = getLocalDateString(d);
         const count = groupedByDate[dateStr] || 0;
         listItems.push({
           key: dateStr,
-          title: d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }),
+          title: d.toLocaleDateString(locale, { weekday: 'long', month: 'short', day: 'numeric' }),
           count: count,
           isGoalMet: count >= dailyGoal,
         });
@@ -75,7 +78,7 @@ export default function ProgressScreen() {
     } else if (timeRange === 'monthly') {
       const targetMonth = new Date(today.getFullYear(), today.getMonth() + offset, 1);
 
-      dText = targetMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      dText = targetMonth.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
 
       const year = targetMonth.getFullYear();
       const month = targetMonth.getMonth();
@@ -84,8 +87,7 @@ export default function ProgressScreen() {
       // Chronological for chart (Day 1 to daysInMonth)
       for (let day = 1; day <= daysInMonth; day++) {
         const d = new Date(year, month, day);
-        d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-        const dateStr = d.toISOString().split('T')[0];
+        const dateStr = getLocalDateString(d);
         const count = groupedByDate[dateStr] || 0;
         chartData.push(count);
         total += count;
@@ -101,13 +103,12 @@ export default function ProgressScreen() {
       // Newest first for list
       for (let day = daysInMonth; day >= 1; day--) {
         const d = new Date(year, month, day);
-        d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-        const dateStr = d.toISOString().split('T')[0];
+        const dateStr = getLocalDateString(d);
         const count = groupedByDate[dateStr] || 0;
         if (count > 0) {
           listItems.push({
             key: dateStr,
-            title: d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+            title: d.toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric' }),
             count: count,
             isGoalMet: count >= dailyGoal,
           });
@@ -151,7 +152,7 @@ export default function ProgressScreen() {
         if (count > 0) {
           listItems.push({
             key: `${yr}`,
-            title: `${yr} Total`,
+            title: `${yr} ${getTranslation(language, 'totalCount')}`,
             count: count,
             isGoalMet: count >= (dailyGoal * 200),
             isYearly: true,
@@ -182,106 +183,106 @@ export default function ProgressScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, isDarkMode && styles.darkContainer]}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Progress</Text>
+          <Text style={[styles.headerTitle, isDarkMode && styles.darkHeaderTitle]}>{getTranslation(language, 'progressTitle')}</Text>
         </View>
 
         {/* Modern Segmented Capsule Switcher */}
-        <View style={styles.segmentedControlContainer}>
+        <View style={[styles.segmentedControlContainer, isDarkMode && styles.darkSegmentedContainer]}>
           <TouchableOpacity
-            style={[styles.segmentBtn, timeRange === 'weekly' && styles.segmentBtnActive]}
+            style={[styles.segmentBtn, timeRange === 'weekly' && (isDarkMode ? styles.darkSegmentBtnActive : styles.segmentBtnActive)]}
             onPress={() => { setTimeRange('weekly'); setOffset(0); }}
           >
-            <Text style={[styles.segmentText, timeRange === 'weekly' && styles.segmentTextActive]}>Daily</Text>
+            <Text style={[styles.segmentText, timeRange === 'weekly' && (isDarkMode ? styles.darkSegmentTextActive : styles.segmentTextActive)]}>{getTranslation(language, 'weekly')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.segmentBtn, timeRange === 'monthly' && styles.segmentBtnActive]}
+            style={[styles.segmentBtn, timeRange === 'monthly' && (isDarkMode ? styles.darkSegmentBtnActive : styles.segmentBtnActive)]}
             onPress={() => { setTimeRange('monthly'); setOffset(0); }}
           >
-            <Text style={[styles.segmentText, timeRange === 'monthly' && styles.segmentTextActive]}>Monthly</Text>
+            <Text style={[styles.segmentText, timeRange === 'monthly' && (isDarkMode ? styles.darkSegmentTextActive : styles.segmentTextActive)]}>{getTranslation(language, 'monthly')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.segmentBtn, timeRange === 'yearly' && styles.segmentBtnActive]}
+            style={[styles.segmentBtn, timeRange === 'yearly' && (isDarkMode ? styles.darkSegmentBtnActive : styles.segmentBtnActive)]}
             onPress={() => { setTimeRange('yearly'); setOffset(0); }}
           >
-            <Text style={[styles.segmentText, timeRange === 'yearly' && styles.segmentTextActive]}>Yearly</Text>
+            <Text style={[styles.segmentText, timeRange === 'yearly' && (isDarkMode ? styles.darkSegmentTextActive : styles.segmentTextActive)]}>{getTranslation(language, 'yearly')}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Date Navigation */}
         <View style={styles.dateNavRow}>
-          <TouchableOpacity onPress={() => setOffset(o => o - 1)} style={styles.navArrowCircle}>
-            <Text style={styles.navArrowText}>‹</Text>
+          <TouchableOpacity onPress={() => setOffset(o => o - 1)} style={[styles.navArrowCircle, isDarkMode && styles.darkArrowCircle]}>
+            <Text style={[styles.navArrowText, isDarkMode && styles.darkArrowText]}>‹</Text>
           </TouchableOpacity>
           <View style={styles.dateRangeContainer}>
-            <Text style={styles.dateRangeText}>{dateRangeText}</Text>
+            <Text style={[styles.dateRangeText, isDarkMode && styles.darkDateRangeText]}>{dateRangeText}</Text>
           </View>
           <TouchableOpacity
             onPress={() => setOffset(o => o + 1)}
             disabled={offset === 0}
-            style={[styles.navArrowCircle, offset === 0 && styles.navArrowCircleDisabled]}
+            style={[styles.navArrowCircle, isDarkMode && styles.darkArrowCircle, offset === 0 && styles.navArrowCircleDisabled]}
           >
-            <Text style={[styles.navArrowText, offset === 0 && styles.navArrowTextDisabled]}>›</Text>
+            <Text style={[styles.navArrowText, isDarkMode && styles.darkArrowText, offset === 0 && styles.navArrowTextDisabled]}>›</Text>
           </TouchableOpacity>
         </View>
 
         {/* Stats Row Cards */}
         <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>{totalCount}</Text>
-            <Text style={styles.statLabel}>Total Period</Text>
+          <View style={[styles.statCard, isDarkMode && styles.darkCardRow]}>
+            <Text style={[styles.statValue, isDarkMode && styles.darkStatValue]}>{totalCount}</Text>
+            <Text style={[styles.statLabel, isDarkMode && styles.darkStatLabel]}>{getTranslation(language, 'totalPeriod')}</Text>
           </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>{dailyAverage}</Text>
-            <Text style={styles.statLabel}>Daily Avg</Text>
+          <View style={[styles.statCard, isDarkMode && styles.darkCardRow]}>
+            <Text style={[styles.statValue, isDarkMode && styles.darkStatValue]}>{dailyAverage}</Text>
+            <Text style={[styles.statLabel, isDarkMode && styles.darkStatLabel]}>{getTranslation(language, 'dailyAvg')}</Text>
           </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>{highestDaily}</Text>
-            <Text style={styles.statLabel}>Highest Day</Text>
+          <View style={[styles.statCard, isDarkMode && styles.darkCardRow]}>
+            <Text style={[styles.statValue, isDarkMode && styles.darkStatValue]}>{highestDaily}</Text>
+            <Text style={[styles.statLabel, isDarkMode && styles.darkStatLabel]}>{getTranslation(language, 'highestDay')}</Text>
           </View>
         </View>
 
         {/* Toggle between Chart and History views */}
-        <View style={styles.viewSegmentedContainer}>
+        <View style={[styles.viewSegmentedContainer, isDarkMode && styles.darkSegmentedContainer]}>
           <TouchableOpacity
-            style={[styles.viewSegmentBtn, activeView === 'chart' && styles.viewSegmentBtnActive]}
+            style={[styles.viewSegmentBtn, activeView === 'chart' && (isDarkMode ? styles.darkSegmentBtnActive : styles.viewSegmentBtnActive)]}
             onPress={() => setActiveView('chart')}
           >
             <Ionicons
               name="stats-chart-outline"
               size={16}
-              color={activeView === 'chart' ? '#FF6B35' : '#7A726A'}
+              color={activeView === 'chart' ? (isDarkMode ? '#000000' : '#FF6B35') : '#7A726A'}
               style={{ marginRight: 6 }}
             />
-            <Text style={[styles.viewSegmentText, activeView === 'chart' && styles.viewSegmentTextActive]}>Trend Chart</Text>
+            <Text style={[styles.viewSegmentText, activeView === 'chart' && (isDarkMode ? styles.darkSegmentTextActive : styles.viewSegmentTextActive)]}>{getTranslation(language, 'trendChart')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.viewSegmentBtn, activeView === 'history' && styles.viewSegmentBtnActive]}
+            style={[styles.viewSegmentBtn, activeView === 'history' && (isDarkMode ? styles.darkSegmentBtnActive : styles.viewSegmentBtnActive)]}
             onPress={() => setActiveView('history')}
           >
             <Ionicons
               name="list-outline"
               size={16}
-              color={activeView === 'history' ? '#FF6B35' : '#7A726A'}
+              color={activeView === 'history' ? (isDarkMode ? '#000000' : '#FF6B35') : '#7A726A'}
               style={{ marginRight: 6 }}
             />
-            <Text style={[styles.viewSegmentText, activeView === 'history' && styles.viewSegmentTextActive]}>History Log</Text>
+            <Text style={[styles.viewSegmentText, activeView === 'history' && (isDarkMode ? styles.darkSegmentTextActive : styles.viewSegmentTextActive)]}>{getTranslation(language, 'historyLog')}</Text>
           </TouchableOpacity>
         </View>
 
         {activeView === 'chart' ? (
           /* Chart Card */
-          <View style={styles.chartCard}>
+          <View style={[styles.chartCard, isDarkMode && styles.darkCardRow]}>
             {dataPoints.length === 0 || dataPoints.every(v => v === 0) ? (
               <View style={styles.noDataContainer}>
-                <Ionicons name="analytics-outline" size={48} color="#FFDDC8" style={{ marginBottom: 12 }} />
-                <Text style={styles.noDataText}>No chants recorded for this period.</Text>
-                <Text style={styles.noDataSubtext}>Begin your spiritual journey on the home tab. 🙏</Text>
+                <Ionicons name="analytics-outline" size={48} color={isDarkMode ? "#333333" : "#FFDDC8"} style={{ marginBottom: 12 }} />
+                <Text style={[styles.noDataText, isDarkMode && styles.darkNoDataText]}>{getTranslation(language, 'noChantsPeriod')}</Text>
+                <Text style={styles.noDataSubtext}>{getTranslation(language, 'beginJourneyHome')}</Text>
               </View>
             ) : (
               <View style={{ alignItems: 'center', width: '100%', position: 'relative' }}>
@@ -309,24 +310,24 @@ export default function ProgressScreen() {
                     });
                   }}
                   chartConfig={{
-                    backgroundColor: '#FFFFFF',
-                    backgroundGradientFrom: '#FFFFFF',
-                    backgroundGradientTo: '#FFFFFF',
+                    backgroundColor: isDarkMode ? '#000000' : '#FFFFFF',
+                    backgroundGradientFrom: isDarkMode ? '#000000' : '#FFFFFF',
+                    backgroundGradientTo: isDarkMode ? '#000000' : '#FFFFFF',
                     decimalPlaces: 0,
-                    color: (opacity = 1) => `rgba(255, 107, 53, ${opacity})`,
-                    labelColor: (opacity = 1) => `#7A726A`,
+                    color: (opacity = 1) => isDarkMode ? `rgba(255, 255, 255, ${opacity})` : `rgba(255, 107, 53, ${opacity})`,
+                    labelColor: (opacity = 1) => isDarkMode ? '#FFFFFF' : '#7A726A',
                     style: {
                       borderRadius: 24
                     },
                     propsForDots: {
                       r: "4",
                       strokeWidth: "2",
-                      stroke: "#FF6B35"
+                      stroke: isDarkMode ? "#FFFFFF" : "#FF6B35"
                     },
-                    fillShadowGradient: '#FF6B35',
+                    fillShadowGradient: isDarkMode ? '#FFFFFF' : '#FF6B35',
                     fillShadowGradientOpacity: 0.2,
                     propsForBackgroundLines: {
-                      stroke: '#F4EFEA',
+                      stroke: isDarkMode ? '#222222' : '#F4EFEA',
                       strokeDasharray: '4',
                       strokeWidth: 1
                     }
@@ -344,28 +345,28 @@ export default function ProgressScreen() {
                       position: 'absolute',
                       left: selectedPoint.x, // Centers around the dot
                       top: selectedPoint.y - 10,  // Show slightly above the dot
-                      backgroundColor: '#333333',
+                      backgroundColor: isDarkMode ? '#FFFFFF' : '#333333',
                       paddingHorizontal: 12,
                       paddingVertical: 6,
                       borderRadius: 8,
                       transform: [{ translateX: -10 }, { translateY: -10 }],
                       pointerEvents: 'none',
-                      shadowColor: '#000',
+                      shadowColor: isDarkMode ? 'transparent' : '#000',
                       shadowOffset: { width: 0, height: 2 },
                       shadowOpacity: 0.2,
                       shadowRadius: 4,
                       elevation: 4,
                     }}
                   >
-                    <Text style={{ color: '#FFFFFF', fontWeight: 'bold', fontSize: 14 }}>
+                    <Text style={{ color: isDarkMode ? '#000000' : '#FFFFFF', fontWeight: 'bold', fontSize: 14 }}>
                       {selectedPoint.value}
                     </Text>
                   </View>
                 )}
-                <View style={styles.detailContainer}>
-                  <Text style={styles.detailLabel}>{getSelectedLabel(activeIdx)}</Text>
-                  <Text style={styles.detailText}>
-                    Count: <Text style={styles.detailHighlight}>{selectedCount}</Text> | Malas: <Text style={styles.detailHighlight}>{Math.floor(selectedCount / 108)}</Text>
+                <View style={[styles.detailContainer, isDarkMode && { borderTopColor: '#333333' }]}>
+                  <Text style={[styles.detailLabel, isDarkMode && styles.darkDetailLabel]}>{getSelectedLabel(activeIdx)}</Text>
+                  <Text style={[styles.detailText, isDarkMode && styles.darkDetailText]}>
+                    {getTranslation(language, 'count')}: <Text style={[styles.detailHighlight, isDarkMode && styles.darkDetailHighlight]}>{selectedCount}</Text> | {getTranslation(language, 'malas')}: <Text style={[styles.detailHighlight, isDarkMode && styles.darkDetailHighlight]}>{Math.floor(selectedCount / 108)}</Text>
                   </Text>
                 </View>
               </View>
@@ -374,53 +375,53 @@ export default function ProgressScreen() {
         ) : (
           /* History Log Section */
           <View style={styles.historySection}>
-            <Text style={styles.sectionHeader}>History Log</Text>
+            <Text style={[styles.sectionHeader, isDarkMode && styles.darkSectionHeader]}>{getTranslation(language, 'historyLog')}</Text>
             {listItems.length === 0 || (timeRange === 'weekly' && listItems.every(item => item.count === 0)) ? (
-              <View style={styles.emptyContainer}>
-                <Ionicons name="flower-outline" size={48} color="#FFDDC8" style={{ marginBottom: 12 }} />
-                <Text style={styles.emptyText}>No chants recorded for this period.</Text>
-                <Text style={styles.emptySubtext}>Begin your spiritual journey on the home tab. 🙏</Text>
+              <View style={[styles.emptyContainer, isDarkMode && styles.darkCardRow]}>
+                <Ionicons name="flower-outline" size={48} color={isDarkMode ? "#333333" : "#FFDDC8"} style={{ marginBottom: 12 }} />
+                <Text style={[styles.emptyText, isDarkMode && styles.darkNoDataText]}>{getTranslation(language, 'noChantsPeriod')}</Text>
+                <Text style={styles.emptySubtext}>{getTranslation(language, 'beginJourneyHome')}</Text>
               </View>
             ) : (
               listItems.map((item) => {
                 if (item.count === 0 && timeRange !== 'weekly') return null;
 
                 return (
-                  <View key={item.key} style={styles.historyRow}>
+                  <View key={item.key} style={[styles.historyRow, isDarkMode && styles.darkCardRow]}>
                     <View style={styles.rowLeft}>
                       <View style={[
                         styles.iconCircle,
-                        item.count > 0 ? styles.iconCircleActive : styles.iconCircleInactive
+                        item.count > 0 ? (isDarkMode ? styles.darkIconCircleActive : styles.iconCircleActive) : styles.iconCircleInactive
                       ]}>
                         <Ionicons
                           name={item.count > 0 ? (item.isGoalMet ? "ribbon" : "checkmark") : "ellipse-outline"}
                           size={18}
-                          color={item.count > 0 ? "#FF6B35" : "#A0A0A0"}
+                          color={item.count > 0 ? (isDarkMode ? "#FFFFFF" : "#FF6B35") : "#A0A0A0"}
                         />
                       </View>
                       <View style={styles.rowTextContainer}>
-                        <Text style={styles.rowTitle}>{item.title}</Text>
+                        <Text style={[styles.rowTitle, isDarkMode && styles.darkRowTitle]}>{item.title}</Text>
                         {item.count > 0 && !item.isYearly && (
-                          <Text style={styles.rowSubtext}>
-                            Daily Goal: {dailyGoal}
+                          <Text style={[styles.rowSubtext, isDarkMode && styles.darkRowSubtext]}>
+                            {getTranslation(language, 'dailyGoal')}: {dailyGoal}
                           </Text>
                         )}
                       </View>
                     </View>
                     <View style={styles.rowRight}>
-                      <Text style={[styles.rowCountText, item.count === 0 && styles.rowCountTextZero]}>
+                      <Text style={[styles.rowCountText, isDarkMode && styles.darkRowCountText, item.count === 0 && styles.rowCountTextZero]}>
                         {item.count > 0 ? `${item.count}` : '0'}
                       </Text>
                       {item.count > 0 && (
                         <View style={[
                           styles.goalBadge,
-                          item.isGoalMet ? styles.goalBadgeMet : styles.goalBadgeNotMet
+                          item.isGoalMet ? (isDarkMode ? styles.darkGoalBadgeMet : styles.goalBadgeMet) : (isDarkMode ? styles.darkGoalBadgeNotMet : styles.goalBadgeNotMet)
                         ]}>
                           <Text style={[
                             styles.goalBadgeText,
-                            item.isGoalMet ? styles.goalBadgeTextMet : styles.goalBadgeTextNotMet
+                            item.isGoalMet ? (isDarkMode ? styles.darkGoalBadgeTextMet : styles.goalBadgeTextMet) : (isDarkMode ? styles.darkGoalBadgeTextNotMet : styles.goalBadgeTextNotMet)
                           ]}>
-                            {item.isGoalMet ? "Goal Met" : "Active"}
+                            {item.isGoalMet ? getTranslation(language, 'goalMet') : getTranslation(language, 'active')}
                           </Text>
                         </View>
                       )}
@@ -759,5 +760,87 @@ const styles = StyleSheet.create({
   detailHighlight: {
     color: '#FF6B35',
     fontWeight: 'bold',
+  },
+  // Dark Mode Styles
+  darkContainer: {
+    backgroundColor: '#000000',
+  },
+  darkHeaderTitle: {
+    color: '#FFFFFF',
+  },
+  darkSegmentedContainer: {
+    backgroundColor: '#111111',
+  },
+  darkSegmentBtnActive: {
+    backgroundColor: '#FFFFFF',
+  },
+  darkSegmentTextActive: {
+    color: '#000000',
+    fontWeight: 'bold',
+  },
+  darkArrowCircle: {
+    backgroundColor: '#000000',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  darkArrowText: {
+    color: '#FFFFFF',
+  },
+  darkDateRangeText: {
+    color: '#FFFFFF',
+  },
+  darkCardRow: {
+    backgroundColor: '#000000',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  darkStatValue: {
+    color: '#FFFFFF',
+  },
+  darkStatLabel: {
+    color: '#8E8E8E',
+  },
+  darkNoDataText: {
+    color: '#FFFFFF',
+  },
+  darkDetailLabel: {
+    color: '#FFFFFF',
+  },
+  darkDetailText: {
+    color: '#CCCCCC',
+  },
+  darkDetailHighlight: {
+    color: '#FFFFFF',
+  },
+  darkSectionHeader: {
+    color: '#FFFFFF',
+  },
+  darkIconCircleActive: {
+    backgroundColor: '#222222',
+  },
+  darkRowTitle: {
+    color: '#FFFFFF',
+  },
+  darkRowSubtext: {
+    color: '#8E8E8E',
+  },
+  darkRowCountText: {
+    color: '#FFFFFF',
+  },
+  darkGoalBadgeMet: {
+    backgroundColor: '#FFFFFF',
+  },
+  darkGoalBadgeNotMet: {
+    backgroundColor: '#222222',
+  },
+  darkGoalBadgeTextMet: {
+    color: '#000000',
+  },
+  darkGoalBadgeTextNotMet: {
+    color: '#FFFFFF',
   },
 });

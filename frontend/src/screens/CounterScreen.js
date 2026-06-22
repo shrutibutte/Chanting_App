@@ -4,6 +4,7 @@ import Svg, { Circle, Path } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { useStore } from '../store/useStore';
 import { syncOfflineCounter } from '../api/client';
+import { getTranslation } from '../utils/translations';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -15,7 +16,9 @@ export default function CounterScreen({ initialTimerSeconds = 0, onExit }) {
     dailyGoal, 
     currentNaam, 
     sessionCount, 
-    resetSession 
+    resetSession,
+    isDarkMode,
+    language
   } = useStore();
 
   const [secondsLeft, setSecondsLeft] = useState(initialTimerSeconds);
@@ -33,7 +36,7 @@ export default function CounterScreen({ initialTimerSeconds = 0, onExit }) {
         if (prev <= 1) {
           clearInterval(interval);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          alert("Time's up! Chanting session completed.");
+          alert(getTranslation(language, 'excellentCompleteSession'));
           handleExit();
           return 0;
         }
@@ -78,7 +81,7 @@ export default function CounterScreen({ initialTimerSeconds = 0, onExit }) {
 
   return (
     <TouchableOpacity
-      style={styles.container}
+      style={[styles.container, isDarkMode && styles.darkContainer]}
       activeOpacity={0.95}
       onPress={handleTap}
     >
@@ -86,20 +89,20 @@ export default function CounterScreen({ initialTimerSeconds = 0, onExit }) {
         
         {/* Top Header Bar */}
         <View style={styles.topBar}>
-          <TouchableOpacity style={styles.exitButton} onPress={handleExit}>
-            <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF6B35" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <TouchableOpacity style={[styles.exitButton, isDarkMode && styles.darkExitButton]} onPress={handleExit}>
+            <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={isDarkMode ? "#FFFFFF" : "#FF6B35"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <Path d="M9 14L4 9l5-5" />
               <Path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11" />
             </Svg>
           </TouchableOpacity>
           <View style={styles.topBarRight}>
             {initialTimerSeconds > 0 && (
-              <View style={styles.timerBadge}>
-                <Text style={styles.timerBadgeText}>⏱️ {formatTime(secondsLeft)}</Text>
+              <View style={[styles.timerBadge, isDarkMode && styles.darkBadge]}>
+                <Text style={[styles.timerBadgeText, isDarkMode && styles.darkBadgeText]}>⏱️ {formatTime(secondsLeft)}</Text>
               </View>
             )}
-            <View style={styles.malaBadge}>
-              <Text style={styles.malaBadgeText}>Malas {Math.floor(todayCount / 108)}</Text>
+            <View style={[styles.malaBadge, isDarkMode && styles.darkBadge]}>
+              <Text style={[styles.malaBadgeText, isDarkMode && styles.darkBadgeText]}>{getTranslation(language, 'malas')} {Math.floor(todayCount / 108)}</Text>
             </View>
           </View>
         </View>
@@ -111,6 +114,7 @@ export default function CounterScreen({ initialTimerSeconds = 0, onExit }) {
               styles.chantingName, 
               { 
                 fontSize: (currentNaam?.name || 'Krishna').length > 20 ? 24 : 36,
+                color: isDarkMode ? '#FFFFFF' : '#FF6B35'
               }
             ]}
             numberOfLines={2}
@@ -122,10 +126,10 @@ export default function CounterScreen({ initialTimerSeconds = 0, onExit }) {
           <View style={styles.circleOuterContainer}>
             <Svg width={size} height={size}>
               {/* Background Circle */}
-              <Circle stroke="#FFE6D3" fill="none" cx={size / 2} cy={size / 2} r={radius} strokeWidth={strokeWidth} />
+              <Circle stroke={isDarkMode ? "#333333" : "#FFE6D3"} fill="none" cx={size / 2} cy={size / 2} r={radius} strokeWidth={strokeWidth} />
               {/* Active Progress Circle */}
               <Circle 
-                stroke="#FF6B35" 
+                stroke={isDarkMode ? "#FFFFFF" : "#FF6B35"} 
                 fill="none" 
                 cx={size / 2} cy={size / 2} r={radius} strokeWidth={strokeWidth} 
                 strokeDasharray={`${circumference} ${circumference}`} 
@@ -137,36 +141,36 @@ export default function CounterScreen({ initialTimerSeconds = 0, onExit }) {
 
             {/* Inner Content inside Circle */}
             <View style={styles.circleInner}>
-              <Text style={styles.countText}>{currentMalaProgress}</Text>
-              <Text style={styles.ofText}>/ 108</Text>
+              <Text style={[styles.countText, isDarkMode && styles.darkCountText]}>{currentMalaProgress}</Text>
+              <Text style={[styles.ofText, isDarkMode && styles.darkOfText]}>/ 108</Text>
             </View>
           </View>
           
-          <Text style={styles.subtitle}>Tap anywhere on screen to count</Text>
+          <Text style={[styles.subtitle, isDarkMode && styles.darkSubtitle]}>{getTranslation(language, 'tapToCount')}</Text>
         </View>
 
         {/* Stats Panel */}
         <View style={styles.statsCardWrapper}>
-          <View style={styles.statsCard}>
+          <View style={[styles.statsCard, isDarkMode && styles.darkCardRow]}>
             <View style={styles.statColumn}>
-              <Text style={styles.statNumber}>{Math.floor(todayCount / 108)}</Text>
-              <Text style={styles.statLabel}>Malas</Text>
+              <Text style={[styles.statNumber, isDarkMode && styles.darkStatNumber]}>{Math.floor(todayCount / 108)}</Text>
+              <Text style={[styles.statLabel, isDarkMode && styles.darkStatLabel]}>{getTranslation(language, 'malas')}</Text>
             </View>
 
-            <View style={styles.verticalDivider} />
+            <View style={[styles.verticalDivider, isDarkMode && { backgroundColor: '#333333' }]} />
 
             <View style={styles.statColumn}>
-              <Text style={styles.statNumber}>
+              <Text style={[styles.statNumber, isDarkMode && styles.darkStatNumber]}>
                 {todayCount}
               </Text>
-              <Text style={styles.statLabel}>Today</Text>
+              <Text style={[styles.statLabel, isDarkMode && styles.darkStatLabel]}>{getTranslation(language, 'today')}</Text>
             </View>
 
-            <View style={styles.verticalDivider} />
+            <View style={[styles.verticalDivider, isDarkMode && { backgroundColor: '#333333' }]} />
 
             <View style={styles.statColumn}>
-              <Text style={styles.statNumber}>{totalCount}</Text>
-              <Text style={styles.statLabel}>Total</Text>
+              <Text style={[styles.statNumber, isDarkMode && styles.darkStatNumber]}>{totalCount}</Text>
+              <Text style={[styles.statLabel, isDarkMode && styles.darkStatLabel]}>{getTranslation(language, 'total')}</Text>
             </View>
           </View>
         </View>
@@ -333,5 +337,42 @@ const styles = StyleSheet.create({
     color: '#8E8E8E',
     fontSize: 12,
     fontWeight: '600',
+  },
+  // Dark Mode Styles
+  darkContainer: {
+    backgroundColor: '#000000',
+  },
+  darkExitButton: {
+    borderColor: '#FFFFFF',
+    backgroundColor: '#000000',
+  },
+  darkBadge: {
+    backgroundColor: '#000000',
+    borderColor: '#FFFFFF',
+  },
+  darkBadgeText: {
+    color: '#FFFFFF',
+  },
+  darkCountText: {
+    color: '#FFFFFF',
+  },
+  darkOfText: {
+    color: '#CCCCCC',
+  },
+  darkSubtitle: {
+    color: '#CCCCCC',
+  },
+  darkCardRow: {
+    backgroundColor: '#000000',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  darkStatNumber: {
+    color: '#FFFFFF',
+  },
+  darkStatLabel: {
+    color: '#8E8E8E',
   },
 });

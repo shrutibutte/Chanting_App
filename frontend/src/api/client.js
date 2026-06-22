@@ -1,16 +1,18 @@
 import { useStore } from '../store/useStore';
 import NetInfo from '@react-native-community/netinfo';
+import { getLocalDateString } from '../utils/date.js';
 
 // Set your computer's local IP Address below if testing on physical device on the same Wifi
 // Use 'http://10.0.2.2:3030' for standard Android Emulator
 // Set your computer's local IP Address below if testing on physical device on the same Wifi
-const API_URL = 'http://192.168.61.129:3030';
+const API_URL = 'http://192.168.76.129:3030';
 
 export const apiCall = async (endpoint, method = 'GET', body = null) => {
   const { userToken } = useStore.getState();
-  const headers = {
-    'Content-Type': 'application/json',
-  };
+  const headers = {};
+  if (body) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   if (userToken) {
     headers['Authorization'] = `Bearer ${userToken}`;
@@ -33,7 +35,7 @@ export const apiCall = async (endpoint, method = 'GET', body = null) => {
       if (response.status === 401 || response.status === 403) {
         useStore.getState().logout();
       }
-      
+
       const errorMessage = data.details ? `${data.error}: ${data.details}` : (data.error || 'API Request Failed');
       throw new Error(errorMessage);
     }
@@ -49,7 +51,7 @@ let syncPromise = null;
 // Batch Sync Logic
 export const syncOfflineCounter = async () => {
   const state = useStore.getState();
-  
+
   // Prevent concurrent syncs using the global lock
   if (state.isSyncing || syncPromise) return syncPromise;
 
@@ -69,9 +71,9 @@ export const syncOfflineCounter = async () => {
       console.log(`Syncing ${tapsToSync} taps to backend...`);
       await apiCall('/sync-taps', 'POST', {
         count: tapsToSync,
-        date: new Date().toISOString().split('T')[0]
+        date: getLocalDateString()
       });
-      
+
       // ONLY clear taps from local storage after a successful HTTP 200 response
       useStore.getState().clearUnsynced(tapsToSync);
       console.log(`Sync successful! Cleared ${tapsToSync} taps from local storage.`);
@@ -85,5 +87,13 @@ export const syncOfflineCounter = async () => {
   })();
 
   return syncPromise;
+};
+
+export const fetchCustomNaamsApi = async () => {
+  return await apiCall('/custom-naams', 'GET');
+};
+
+export const addCustomNaamApi = async (name) => {
+  return await apiCall('/custom-naams', 'POST', { name });
 };
 

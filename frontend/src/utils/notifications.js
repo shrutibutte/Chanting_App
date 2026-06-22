@@ -6,7 +6,7 @@ let Notifications = null;
 try {
   if (!isWeb) {
     Notifications = require('expo-notifications');
-    
+
     // Configure notification behavior
     Notifications.setNotificationHandler({
       handleNotification: async () => ({
@@ -43,14 +43,19 @@ export async function requestNotificationPermissions() {
 export async function scheduleDailyReminder(timeStr) {
   if (isWeb || !Notifications) return;
   try {
-    // Cancel all existing scheduled notifications first to avoid duplicates
-    await Notifications.cancelAllScheduledNotificationsAsync();
+    // Cancel the specific daily reminder first to avoid duplicates
+    try {
+      await Notifications.cancelScheduledNotificationAsync("daily-morning-reminder");
+    } catch (e) {
+      // Ignore
+    }
 
     const [hours, minutes] = timeStr.split(':').map(Number);
 
     await Notifications.scheduleNotificationAsync({
+      identifier: "daily-morning-reminder",
       content: {
-        title: "🌸 Time for Naam Jaap!",
+        title: "🙏 Time for Naam Jaap!",
         body: "Start your daily Naam Jaap to maintain your streak of devotion 🙏",
         sound: true,
       },
@@ -68,7 +73,12 @@ export async function scheduleDailyReminder(timeStr) {
 export async function cancelAllReminders() {
   if (isWeb || !Notifications) return;
   try {
-    await Notifications.cancelAllScheduledNotificationsAsync();
+    try {
+      await Notifications.cancelScheduledNotificationAsync("daily-morning-reminder");
+    } catch (e) { }
+    try {
+      await Notifications.cancelScheduledNotificationAsync("target-completion-reminder");
+    } catch (e) { }
   } catch (err) {
     console.error("Error canceling notifications:", err);
   }
@@ -107,7 +117,7 @@ export async function updateTargetReminder(todayCount, dailyGoal) {
         date: targetTime.getTime(),
       },
     });
-    
+
     console.log(`[Notification] Target completion reminder scheduled for: ${targetTime.toString()}`);
   } catch (err) {
     console.error("Error scheduling target reminder:", err);
