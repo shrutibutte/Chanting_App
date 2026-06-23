@@ -47,17 +47,6 @@ const authenticateToken = (req, res, next) => {
 // --- Email OTP Service ---
 const otps = new Map(); // Global memory (or Redis) for storing temporary OTPs
 
-// For integration testing only: allow retrieving OTP in dev/test mode
-if (process.env.NODE_ENV !== 'production') {
-  app.get('/auth/debug-otp', (req, res) => {
-    const { email } = req.query;
-    if (!email) return res.status(400).json({ error: 'Email required' });
-    const data = otps.get(email);
-    if (!data) return res.status(404).json({ error: 'No OTP found' });
-    res.json({ otp: data.otp, expiresAt: data.expiresAt, attempts: data.attempts });
-  });
-}
-
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',

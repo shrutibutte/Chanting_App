@@ -184,10 +184,10 @@ export default function ProgressScreen() {
 
   return (
     <SafeAreaView style={[styles.container, isDarkMode && styles.darkContainer]}>
+      <View style={styles.header}>
+        <Text style={[styles.headerTitle, isDarkMode && styles.darkHeaderTitle]}>{getTranslation(language, 'progressTitle')}</Text>
+      </View>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <View style={styles.header}>
-          <Text style={[styles.headerTitle, isDarkMode && styles.darkHeaderTitle]}>{getTranslation(language, 'progressTitle')}</Text>
-        </View>
 
         {/* Modern Segmented Capsule Switcher */}
         <View style={[styles.segmentedControlContainer, isDarkMode && styles.darkSegmentedContainer]}>
@@ -451,6 +451,7 @@ const styles = StyleSheet.create({
     paddingTop: 40,
     marginBottom: 20,
     marginTop: 10,
+    paddingHorizontal: 16,
   },
   headerTitle: {
     fontSize: 28,

@@ -65,8 +65,13 @@ export const translations = {
     mantraPlaceholder: "e.g. Om Namah Shivaya",
     suggestions: "Suggestions",
     addCustomSubtitle: "Enter your favourite deity name or mantra to add it to your selection list.",
-    customNameExists: "This name already exists in your custom list.",
     nameCannotBeEmpty: "Name cannot be empty.",
+    customNameExists: "This name is already in your list. You can select it directly.",
+    addCountSub: "Log counts or complete physical Malas",
+    hideNaamSub: "Focus on chanting without text on screen",
+    showNaamSub: "Show the deity name on screen",
+    setTimerSub: "Chant with a countdown timer",
+    blackoutModeSub: "Turn screen off while chanting to save battery",
 
     // CounterScreen
     chantingSession: "Chanting Session",
@@ -78,7 +83,7 @@ export const translations = {
     chantComplete: "Chant complete!",
     excellentCompleteSession: "Excellent! You have completed your chanting session.",
     close: "Close",
-    
+
     // ProgressScreen
     progressTitle: "Progress",
     historyTitle: "History",
@@ -135,7 +140,7 @@ export const translations = {
     enterValidTime: "Please enter time in HH:MM 24-hour format.",
     goalUpdated: "Daily goal updated successfully.",
     reminderUpdated: "Reminder time updated successfully.",
-    
+
     // StreakScreen
     current: "Current",
     best: "Best",
@@ -252,8 +257,13 @@ export const translations = {
     mantraPlaceholder: "उदा: ॐ नमः शिवाय",
     suggestions: "सुझाव",
     addCustomSubtitle: "अपनी पसंद का देवता नाम या मंत्र दर्ज करें जिसे आप सूची में जोड़ना चाहते हैं।",
-    customNameExists: "यह नाम आपकी कस्टम सूची में पहले से मौजूद है।",
     nameCannotBeEmpty: "नाम खाली नहीं हो सकता।",
+    customNameExists: "यह नाम आपकी सूची में पहले से ही है। आप इसे सीधे चुन सकते हैं।",
+    addCountSub: "जाप संख्या दर्ज करें या माला जोड़ें",
+    hideNaamSub: "स्क्रीन पर नाम छिपाकर जाप पर ध्यान दें",
+    showNaamSub: "स्क्रीन पर नाम दिखाएं",
+    setTimerSub: "उल्टी गिनती टाइमर के साथ जाप करें",
+    blackoutModeSub: "बैटरी बचाने के लिए स्क्रीन बंद करके जाप करें",
 
     // CounterScreen
     chantingSession: "जाप सत्र",
@@ -439,8 +449,13 @@ export const translations = {
     mantraPlaceholder: "उदा: ॐ नमः शिवाय",
     suggestions: "सुझाव",
     addCustomSubtitle: "तुमच्या आवडीचे देवाचे नाव किंवा मंत्र प्रविष्ट करा जे तुम्हाला सूचीमध्ये जोडायचे आहे.",
-    customNameExists: "हे नाव तुमच्या कस्टम सूचीमध्ये आधीपासूनच अस्तित्त्वात आहे.",
     nameCannotBeEmpty: "नाव रिकामे असू शकत नाही.",
+    customNameExists: "हे नाव तुमच्या सूचीमध्ये आधीपासूनच आहे. तुम्ही ते थेट निवडू शकता.",
+    addCountSub: "जाप संख्या किंवा माळा जोडा",
+    hideNaamSub: "स्क्रीनवर नावाशिवाय जापवर लक्ष केंद्रित करा",
+    showNaamSub: "स्क्रीनवर नाम दर्शवा",
+    setTimerSub: "काउंटडाउन टाइमरसह जाप करा",
+    blackoutModeSub: "बॅटरी वाचवण्यासाठी स्क्रीन बंद करून जाप करा",
 
     // CounterScreen
     chantingSession: "जाप सत्र",

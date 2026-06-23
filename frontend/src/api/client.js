@@ -5,7 +5,7 @@ import { getLocalDateString } from '../utils/date.js';
 // Set your computer's local IP Address below if testing on physical device on the same Wifi
 // Use 'http://10.0.2.2:3030' for standard Android Emulator
 // Set your computer's local IP Address below if testing on physical device on the same Wifi
-const API_URL = 'http://192.168.76.129:3030';
+const API_URL = 'http://192.168.134.129:3030';
 
 export const apiCall = async (endpoint, method = 'GET', body = null) => {
   const { userToken } = useStore.getState();
@@ -41,7 +41,9 @@ export const apiCall = async (endpoint, method = 'GET', body = null) => {
     }
     return data;
   } catch (error) {
-    console.error(`[API Error] ${endpoint}:`, error.message);
+    if (error.message.includes('Network request failed') || error.message.includes('Failed to fetch')) {
+      console.error(`[API Error] ${endpoint}:`, error.message);
+    }
     throw error;
   }
 };

@@ -32,18 +32,17 @@ const GODS_LIST = [
 ]
 
 export default function DashboardScreen({ onStartChanting, onPressStreak }) {
-  const { userToken, currentNaam, totalCount, todayCount, sessionCount, logout, dailyGoal, setStats, setNaam, incrementTap, addManualCount, lastUnlockedLevel, showLevelModal, unlockedLevelInfo, setShowLevelModal, isDarkMode, language, customNaams, fetchCustomNaams, addCustomNaam } = useStore();
+  const { userToken, currentNaam, totalCount, todayCount, sessionCount, logout, dailyGoal, setStats, setNaam, incrementTap, addManualCount, lastUnlockedLevel, showLevelModal, unlockedLevelInfo, setShowLevelModal, isDarkMode, language, customNaams, fetchCustomNaams, addCustomNaam, isBlackoutMode, setIsBlackoutMode } = useStore();
   const [loading, setLoading] = useState(false);
   const [synced, setSynced] = useState(true);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isChanting, setIsChanting] = useState(false); // Placeholder or unused local sync
-  const [isBlackoutMode, setIsBlackoutMode] = useState(false);
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const [isNaamHidden, setIsNaamHidden] = useState(false);
   const [isTimerModalVisible, setIsTimerModalVisible] = useState(false);
   const [isLogMalaModalVisible, setIsLogMalaModalVisible] = useState(false);
   const [customCountInput, setCustomCountInput] = useState('');
-  
+
   // Custom Naam input modal states
   const [isAddCustomModalVisible, setIsAddCustomModalVisible] = useState(false);
   const [customNaamInput, setCustomNaamInput] = useState('');
@@ -51,11 +50,11 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
   const handleSaveCustomNaam = async () => {
     if (!customNaamInput || customNaamInput.trim() === '') {
       return Alert.alert(
-        getTranslation(language, 'error'), 
+        getTranslation(language, 'appName'), 
         getTranslation(language, 'nameCannotBeEmpty')
       );
     }
-    
+
     try {
       await addCustomNaam(customNaamInput.trim());
       setCustomNaamInput('');
@@ -63,13 +62,13 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
       fetchCustomNaams();
     } catch (err) {
       let errorMsg = err.message || 'Failed to save custom name';
-      
+
       if (err.message && err.message.includes('already exists')) {
         errorMsg = getTranslation(language, 'customNameExists');
       }
-      
+
       Alert.alert(
-        getTranslation(language, 'error'), 
+        getTranslation(language, 'appName'), 
         errorMsg
       );
     }
@@ -129,7 +128,7 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
   const fetchStats = async () => {
     try {
       setLoading(true);
-      
+
       // Ensure daily reset runs locally before fetching
       useStore.getState().checkDailyReset();
 
@@ -209,11 +208,11 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
     return (
       <View style={styles.blackoutContainer}>
         <StatusBar hidden />
-        
+
         {/* Full screen tap area for chanting */}
-        <TouchableOpacity 
-          style={styles.blackoutTapArea} 
-          activeOpacity={1} 
+        <TouchableOpacity
+          style={styles.blackoutTapArea}
+          activeOpacity={1}
           onPress={handleBlackoutTap}
         />
 
@@ -257,10 +256,10 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
       )}
 
       <View style={styles.chantingInfo}>
-        <Text 
+        <Text
           style={[
-            styles.chantingName, 
-            { 
+            styles.chantingName,
+            {
               fontSize: (currentNaam?.name || 'Krishna').length > 40 ? 18 : (currentNaam?.name || 'Krishna').length > 15 ? 25 : 70,
               textAlign: 'center',
               paddingHorizontal: 20,
@@ -326,7 +325,7 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
               <>
                 <Text style={[styles.statNumber, isDarkMode && styles.darkStatNumber]}>
                   {todayCount}
-                  <Text style={{fontSize: 14, color: '#A0A0A0'}}>{` / ${dailyGoal || 108}`}</Text>
+                  <Text style={{ fontSize: 14, color: '#A0A0A0' }}>{` / ${dailyGoal || 108}`}</Text>
                 </Text>
                 <Text style={[styles.statLabel, isDarkMode && styles.darkStatLabel]}>{getTranslation(language, 'todayGoal')}</Text>
               </>
@@ -394,7 +393,7 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
             />
 
             {/* Cycle Language Floating Button inside modal */}
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.langCycleFloatingButton, isDarkMode && styles.darkLangCycleFloatingButton]}
               onPress={() => {
                 const languages = ['en', 'hi', 'mr'];
@@ -416,24 +415,28 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
         onRequestClose={() => setIsMenuVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, isDarkMode && styles.darkModalContent, { height: '42%' }]}>
+          <View style={[styles.modalContent, isDarkMode && styles.darkModalContent, { height: 440 }]}>
+            {/* Native Drag Handle */}
+            <View style={[styles.modalDragHandle, isDarkMode && styles.darkModalDragHandle]} />
+
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, isDarkMode && styles.darkModalTitle]}>{getTranslation(language, 'options')}</Text>
               <TouchableOpacity onPress={() => setIsMenuVisible(false)}>
-                <Text style={[styles.closeModalText, isDarkMode && styles.darkCloseModalText]}>✕</Text>
+                <Ionicons name="close-circle-outline" size={24} color={isDarkMode ? "#FFFFFF" : "#8E8E8E"} />
               </TouchableOpacity>
             </View>
-            
+
             {/* Log Physical Mala */}
-            <TouchableOpacity 
-              style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]} 
+            <TouchableOpacity
+              style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]}
               onPress={() => {
                 setIsMenuVisible(false);
                 setIsLogMalaModalVisible(true);
               }}
+              activeOpacity={0.7}
             >
-              <View style={styles.menuIconContainer}>
-                <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={isDarkMode ? "#FFFFFF" : "#FF6B35"} strokeWidth="2.2">
+              <View style={[styles.menuIconWrapper, { backgroundColor: isDarkMode ? '#2C1B10' : '#FFF2E6' }]}>
+                <Svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={isDarkMode ? "#FF8C5A" : "#FF6B35"} strokeWidth="2.2">
                   <Circle cx="12" cy="5" r="2" />
                   <Circle cx="16.5" cy="7" r="2" />
                   <Circle cx="19" cy="11.5" r="2" />
@@ -447,25 +450,28 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
               </View>
               <View style={styles.menuOptionTextContainer}>
                 <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{getTranslation(language, 'addCount')}</Text>
+                <Text style={[styles.menuOptionSubtitle, isDarkMode && styles.darkMenuOptionSubtitle]}>{getTranslation(language, 'addCountSub')}</Text>
               </View>
+              <Ionicons name="chevron-forward-outline" size={16} color={isDarkMode ? "#555555" : "#CCCCCC"} />
             </TouchableOpacity>
-            
+
             {/* Hide/Show Naam */}
-            <TouchableOpacity 
-              style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]} 
+            <TouchableOpacity
+              style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]}
               onPress={() => {
                 setIsNaamHidden(!isNaamHidden);
                 setIsMenuVisible(false);
               }}
+              activeOpacity={0.7}
             >
-              <View style={styles.menuIconContainer}>
+              <View style={[styles.menuIconWrapper, { backgroundColor: isDarkMode ? '#1D2530' : '#EBF8FF' }]}>
                 {isNaamHidden ? (
-                  <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={isDarkMode ? "#FFFFFF" : "#333333"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <Svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={isDarkMode ? "#63B3ED" : "#3182CE"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                     <Path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                     <Circle cx="12" cy="12" r="3" />
                   </Svg>
                 ) : (
-                  <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={isDarkMode ? "#FFFFFF" : "#333333"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <Svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={isDarkMode ? "#63B3ED" : "#3182CE"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                     <Path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
                     <Line x1="1" y1="1" x2="23" y2="23" />
                   </Svg>
@@ -473,48 +479,57 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
               </View>
               <View style={styles.menuOptionTextContainer}>
                 <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{isNaamHidden ? getTranslation(language, 'showNaam') : getTranslation(language, 'hideNaam')}</Text>
+                <Text style={[styles.menuOptionSubtitle, isDarkMode && styles.darkMenuOptionSubtitle]}>{isNaamHidden ? getTranslation(language, 'showNaamSub') : getTranslation(language, 'hideNaamSub')}</Text>
               </View>
+              <Ionicons name="chevron-forward-outline" size={16} color={isDarkMode ? "#555555" : "#CCCCCC"} />
             </TouchableOpacity>
 
             {/* Set Timer */}
-            <TouchableOpacity 
-              style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]} 
+            <TouchableOpacity
+              style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]}
               onPress={() => {
                 setIsMenuVisible(false);
                 setIsTimerModalVisible(true);
               }}
+              activeOpacity={0.7}
             >
-              <View style={styles.menuIconContainer}>
-                <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={isDarkMode ? "#FFFFFF" : "#333333"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <View style={[styles.menuIconWrapper, { backgroundColor: isDarkMode ? '#241B35' : '#F3E8FF' }]}>
+                <Svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={isDarkMode ? "#B794F4" : "#805AD5"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <Circle cx="12" cy="12" r="10" />
                   <Polyline points="12 6 12 12 16 14" />
                 </Svg>
               </View>
               <View style={styles.menuOptionTextContainer}>
                 <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{getTranslation(language, 'setTimer')}</Text>
+                <Text style={[styles.menuOptionSubtitle, isDarkMode && styles.darkMenuOptionSubtitle]}>{getTranslation(language, 'setTimerSub')}</Text>
               </View>
+              <Ionicons name="chevron-forward-outline" size={16} color={isDarkMode ? "#555555" : "#CCCCCC"} />
             </TouchableOpacity>
 
             {/* Blackout Mode */}
-            <TouchableOpacity 
-              style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]} 
+            <TouchableOpacity
+              style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]}
               onPress={() => {
                 setIsMenuVisible(false);
                 setIsBlackoutMode(true);
               }}
+              activeOpacity={0.7}
             >
-              <View style={styles.menuIconContainer}>
-                <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={isDarkMode ? "#FFFFFF" : "#333333"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <Circle cx="12" cy="12" r="10" fill={isDarkMode ? "#FFFFFF" : "#333333"} />
+              <View style={[styles.menuIconWrapper, { backgroundColor: isDarkMode ? '#222222' : '#F7FAFC' }]}>
+                <Svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={isDarkMode ? "#E2E8F0" : "#4A5568"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <Circle cx="12" cy="12" r="10" fill={isDarkMode ? "#E2E8F0" : "#4A5568"} />
                 </Svg>
               </View>
               <View style={styles.menuOptionTextContainer}>
                 <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{getTranslation(language, 'blackoutMode')}</Text>
+                <Text style={[styles.menuOptionSubtitle, isDarkMode && styles.darkMenuOptionSubtitle]}>{getTranslation(language, 'blackoutModeSub')}</Text>
               </View>
+              <Ionicons name="chevron-forward-outline" size={16} color={isDarkMode ? "#555555" : "#CCCCCC"} />
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
+
 
       {/* Log Physical Mala Modal */}
       <Modal
@@ -534,7 +549,7 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
               <View style={styles.quickMalaContainer}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.quickMalaBtn, isDarkMode && styles.darkQuickMalaBtn]}
                   onPress={() => {
                     addManualCount(108);
@@ -546,7 +561,7 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
                   <Text style={[styles.quickMalaBtnSub, isDarkMode && styles.darkQuickMalaBtnSub]}>108 {getTranslation(language, 'counts')}</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.quickMalaBtn, isDarkMode && styles.darkQuickMalaBtn]}
                   onPress={() => {
                     addManualCount(216);
@@ -560,7 +575,7 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
               </View>
 
               <View style={styles.quickMalaContainer}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.quickMalaBtn, isDarkMode && styles.darkQuickMalaBtn]}
                   onPress={() => {
                     addManualCount(432);
@@ -572,7 +587,7 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
                   <Text style={[styles.quickMalaBtnSub, isDarkMode && styles.darkQuickMalaBtnSub]}>432 {getTranslation(language, 'counts')}</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.quickMalaBtn, isDarkMode && styles.darkQuickMalaBtn]}
                   onPress={() => {
                     addManualCount(864);
@@ -597,7 +612,7 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
                 />
               </View>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.submitCountBtn, isDarkMode && styles.darkSubmitCountBtn]}
                 onPress={() => {
                   const count = parseInt(customCountInput, 10);
@@ -628,7 +643,7 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
         <View style={styles.levelOverlay}>
           <View style={[styles.levelCard, isDarkMode && styles.darkLevelCard]}>
             <Text style={[styles.levelTitleText, isDarkMode && styles.darkLevelTitleText]}>{getTranslation(language, 'levelUnlockedTitle')}</Text>
-            
+
             <View style={styles.levelCelebrationIconContainer}>
               <Text style={styles.levelCelebrationIcon}>{unlockedLevelInfo?.icon || '🌱'}</Text>
             </View>
@@ -647,8 +662,8 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
               </Text>
             </View>
 
-            <TouchableOpacity 
-              style={[styles.continueJourneyButton, isDarkMode && styles.darkContinueJourneyButton]} 
+            <TouchableOpacity
+              style={[styles.continueJourneyButton, isDarkMode && styles.darkContinueJourneyButton]}
               onPress={() => setShowLevelModal(false)}
               activeOpacity={0.8}
             >
@@ -675,8 +690,8 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
-              <TouchableOpacity 
-                style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]} 
+              <TouchableOpacity
+                style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]}
                 onPress={() => {
                   setIsTimerModalVisible(false);
                   onStartChanting(0); // 0 means no timer
@@ -685,8 +700,8 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
                 <Text style={[styles.menuOptionTitle, { color: isDarkMode ? '#FFFFFF' : '#FF6B35' }]}>{getTranslation(language, 'noTimerOption')}</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity 
-                style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]} 
+              <TouchableOpacity
+                style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]}
                 onPress={() => {
                   setIsTimerModalVisible(false);
                   onStartChanting(60); // 1 minute
@@ -695,8 +710,8 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
                 <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{getTranslation(language, 'oneMinute')}</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity 
-                style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]} 
+              <TouchableOpacity
+                style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]}
                 onPress={() => {
                   setIsTimerModalVisible(false);
                   onStartChanting(300); // 5 minutes
@@ -705,8 +720,8 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
                 <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{getTranslation(language, 'fiveMinutes')}</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity 
-                style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]} 
+              <TouchableOpacity
+                style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]}
                 onPress={() => {
                   setIsTimerModalVisible(false);
                   onStartChanting(600); // 10 minutes
@@ -715,8 +730,8 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
                 <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{getTranslation(language, 'tenMinutes')}</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity 
-                style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]} 
+              <TouchableOpacity
+                style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]}
                 onPress={() => {
                   setIsTimerModalVisible(false);
                   onStartChanting(900); // 15 minutes
@@ -725,8 +740,8 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
                 <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{getTranslation(language, 'fifteenMinutes')}</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity 
-                style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]} 
+              <TouchableOpacity
+                style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]}
                 onPress={() => {
                   setIsTimerModalVisible(false);
                   onStartChanting(1200); // 20 minutes
@@ -735,8 +750,8 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
                 <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{getTranslation(language, 'twentyMinutes')}</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity 
-                style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]} 
+              <TouchableOpacity
+                style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]}
                 onPress={() => {
                   setIsTimerModalVisible(false);
                   onStartChanting(1800); // 30 minutes
@@ -761,7 +776,7 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
             <Text style={[styles.customModalTitle, isDarkMode && styles.darkCustomModalTitle]}>
               {getTranslation(language, 'addCustomMantra')}
             </Text>
-            
+
             <Text style={[styles.customModalSubtitle, isDarkMode && styles.darkCustomModalSubtitle]}>
               {getTranslation(language, 'addCustomSubtitle')}
             </Text>
@@ -783,14 +798,14 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
 
             {/* Suggestion Chips */}
             <View style={styles.suggestionsContainer}>
-              {(language === 'hi' || language === 'mr' 
+              {(language === 'hi' || language === 'mr'
                 ? ['राधे कृष्ण', 'श्री राम', 'ॐ नमः शिवाय', 'हरे कृष्ण', 'ॐ नमो नारायणाय']
                 : ['Radhe Krishna', 'Shri Ram', 'Om Namah Shivaya', 'Hare Krishna', 'Om Namo Narayanaya']
               ).map((sug) => (
                 <TouchableOpacity
                   key={sug}
                   style={[
-                    styles.suggestionChip, 
+                    styles.suggestionChip,
                     isDarkMode && styles.darkSuggestionChip,
                     customNaamInput.trim() === sug && (isDarkMode ? styles.darkSuggestionChipSelected : styles.suggestionChipSelected)
                   ]}
@@ -798,7 +813,7 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
                   activeOpacity={0.7}
                 >
                   <Text style={[
-                    styles.suggestionChipText, 
+                    styles.suggestionChipText,
                     isDarkMode && styles.darkSuggestionChipText,
                     customNaamInput.trim() === sug && (isDarkMode ? styles.darkSuggestionChipTextSelected : styles.suggestionChipTextSelected)
                   ]}>
@@ -809,8 +824,8 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
             </View>
 
             <View style={styles.customModalButtons}>
-              <TouchableOpacity 
-                style={[styles.customModalBtnCancel, isDarkMode && styles.darkCustomModalBtnCancel]} 
+              <TouchableOpacity
+                style={[styles.customModalBtnCancel, isDarkMode && styles.darkCustomModalBtnCancel]}
                 onPress={() => {
                   setCustomNaamInput('');
                   setIsAddCustomModalVisible(false);
@@ -821,9 +836,9 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
                   {getTranslation(language, 'cancel')}
                 </Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.customModalBtnSave, isDarkMode && styles.darkCustomModalBtnSave]} 
+
+              <TouchableOpacity
+                style={[styles.customModalBtnSave, isDarkMode && styles.darkCustomModalBtnSave]}
                 onPress={handleSaveCustomNaam}
                 activeOpacity={0.8}
               >
@@ -940,7 +955,7 @@ const styles = StyleSheet.create({
     // fontSize: 60,
     fontWeight: '800',
     marginBottom: 8,
-    marginTop:30,
+    marginTop: 30,
   },
   changeNameText: {
     color: '#fc8f67ff',
@@ -1027,12 +1042,23 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     paddingHorizontal: 20,
-    paddingTop: 24,
+    paddingTop: 16,
     paddingBottom: 40,
     height: '65%', // Similar to the screenshot 
+  },
+  modalDragHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#E0E0E0',
+    alignSelf: 'center',
+    marginBottom: 12,
+  },
+  darkModalDragHandle: {
+    backgroundColor: '#444444',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1098,23 +1124,34 @@ const styles = StyleSheet.create({
   menuOptionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
     borderRadius: 16,
+    marginBottom: 6,
   },
-  menuIconContainer: {
-    marginRight: 16,
-    width: 24,
+  menuIconWrapper: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 16,
   },
   menuOptionTextContainer: {
     flex: 1,
   },
   menuOptionTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333333',
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#2D3748',
+  },
+  menuOptionSubtitle: {
+    fontSize: 11,
+    color: '#718096',
+    marginTop: 2,
+  },
+  darkMenuOptionSubtitle: {
+    color: '#A0AEC0',
   },
   modalInstruction: {
     fontSize: 14,
@@ -1225,9 +1262,12 @@ const styles = StyleSheet.create({
     color: '#8E8E8E',
   },
   darkModalContent: {
-    backgroundColor: '#000000',
-    borderWidth: 1,
-    borderColor: '#FFFFFF',
+    backgroundColor: '#121212',
+    borderTopWidth: 1.5,
+    borderLeftWidth: 1.5,
+    borderRightWidth: 1.5,
+    borderBottomWidth: 0,
+    borderColor: '#2D3748',
   },
   darkModalTitle: {
     color: '#FFFFFF',
@@ -1392,8 +1432,7 @@ const styles = StyleSheet.create({
     color: '#000000',
   },
   darkMenuOptionItem: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#222222',
+    backgroundColor: 'transparent',
   },
   godItemSelectedDark: {
     backgroundColor: '#222222',

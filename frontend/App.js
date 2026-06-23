@@ -110,7 +110,8 @@ export default function App() {
     isReminderEnabled,
     reminderTime,
     isDarkMode,
-    language
+    language,
+    isBlackoutMode
   } = useStore();
 
   // Toast state
@@ -387,7 +388,7 @@ export default function App() {
       {activeTab === 'journey' && <JourneyScreen />}
       {activeTab === 'settings' && <SettingsScreen />}
 
-      <BottomTabBar activeTab={activeTab} onTabSelect={setActiveTab} />
+      {!isBlackoutMode && <BottomTabBar activeTab={activeTab} onTabSelect={setActiveTab} />}
 
       {/* Floating / Sliding Daily Toast Popup */}
       {showToast && (

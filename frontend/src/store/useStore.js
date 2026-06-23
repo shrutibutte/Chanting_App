@@ -138,7 +138,9 @@ export const useStore = create(
             return data.naam;
           }
         } catch (err) {
-          console.log("Failed to add custom naam", err.message);
+          if (!err.message.includes('already exists')) {
+            console.log("Failed to add custom naam", err.message);
+          }
           throw err;
         }
       },
@@ -149,6 +151,10 @@ export const useStore = create(
       showCelebrationModal: false,
       setShowCelebrationModal: (show) => set({ showCelebrationModal: show }),
       setLastStreakMaintainedPopupDate: (date) => set({ lastStreakMaintainedPopupDate: date }),
+      
+      // Blackout Mode global state
+      isBlackoutMode: false,
+      setIsBlackoutMode: (status) => set({ isBlackoutMode: status }),
 
       // Journey Levels
       lastUnlockedLevel: 0,
@@ -172,7 +178,8 @@ export const useStore = create(
         unlockedLevelInfo: null,
         lastCelebrationDate: null,
         lastStreakMaintainedPopupDate: null,
-        customNaams: []
+        customNaams: [],
+        isBlackoutMode: false
       }),
 
       // Session logic
