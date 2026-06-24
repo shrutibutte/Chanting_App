@@ -312,9 +312,16 @@ export const useStore = create(
     {
       name: 'naam-jaap-storage', 
       storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => {
+        // Exclude transient/loading states from being written to AsyncStorage
+        const { isSyncing, ...rest } = state;
+        return rest;
+      },
       onRehydrateStorage: (state) => {
         return (state, error) => {
           if (state && !error) {
+            // Force reset isSyncing to false on startup/reload to prevent lockouts
+            state.setIsSyncing(false);
             state.checkDailyReset();
           }
         };

@@ -15,7 +15,7 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    ```bash
    npx expo start
    npx expo start -c
-   npx expo start --go
+   npx expo start --go     --- please network cnnection also. if not working 
    npx expo start --lan -c
    open cmd 
    ipconfig

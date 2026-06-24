@@ -1,11 +1,11 @@
 import { useStore } from '../store/useStore';
-import NetInfo from '@react-native-community/netinfo';
 import { getLocalDateString } from '../utils/date.js';
 
 // Set your computer's local IP Address below if testing on physical device on the same Wifi
 // Use 'http://10.0.2.2:3030' for standard Android Emulator
 // Set your computer's local IP Address below if testing on physical device on the same Wifi
-const API_URL = 'https://naam-jaap-app-backend.vercel.app';
+// const API_URL = 'http://192.168.90.129:3030';
+const API_URL = "https://naam-jaap-app-backend.vercel.app"
 
 export const apiCall = async (endpoint, method = 'GET', body = null) => {
   const { userToken } = useStore.getState();
@@ -58,11 +58,18 @@ export const syncOfflineCounter = async () => {
   if (state.isSyncing || syncPromise) return syncPromise;
 
   syncPromise = (async () => {
-    const tapsToSync = state.unsyncedTaps;
+    // Wait for the local store to finish rehydrating from AsyncStorage on startup
+    let attempts = 0;
+    while (useStore.persist && !useStore.persist.hasHydrated() && attempts < 20) {
+      await new Promise(resolve => setTimeout(resolve, 50));
+      attempts++;
+    }
 
-    // Don't sync if internet is out or nothing to sync
-    const netInfo = await NetInfo.fetch();
-    if (!netInfo.isConnected || tapsToSync <= 0) {
+    const tapsToSync = useStore.getState().unsyncedTaps;
+
+    // Don't sync if nothing to sync. 
+    // If the device is offline, the apiCall fetch request will fail and be caught safely in the try-catch block.
+    if (tapsToSync <= 0) {
       syncPromise = null;
       return;
     }
@@ -80,6 +87,7 @@ export const syncOfflineCounter = async () => {
       useStore.getState().clearUnsynced(tapsToSync);
       console.log(`Sync successful! Cleared ${tapsToSync} taps from local storage.`);
     } catch (error) {
+      console.error("Sync failed error:", error);
       console.log("Sync failed. Taps safely kept in local storage. Will retry automatically.");
       // Taps were never cleared, so no need to put them back!
     } finally {
