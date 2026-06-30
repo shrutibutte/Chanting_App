@@ -21,7 +21,8 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.butte.frontend"
+      "package": "com.butte.frontend",
+      "allowBackup": true
     },
     "web": {
       "favicon": "./assets/favicon.png"
