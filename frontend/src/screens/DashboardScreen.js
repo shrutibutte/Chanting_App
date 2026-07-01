@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, SafeAreaView, Modal, SectionList, FlatList, StatusBar, ScrollView, TextInput, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, TouchableWithoutFeedback, StyleSheet, ActivityIndicator, SafeAreaView, Modal, SectionList, FlatList, StatusBar, ScrollView, TextInput, Alert } from 'react-native';
 import Svg, { Circle, Path, Line, Rect, Polyline } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,6 +8,7 @@ import { apiCall, syncOfflineCounter } from '../api/client';
 import NetInfo from '@react-native-community/netinfo';
 import { getLocalDateString } from '../utils/date.js';
 import { getTranslation } from '../utils/translations';
+import { getTheme, THEMES } from '../utils/themes';
 
 const GODS_LIST = [
   { id: '1', name: 'राधा' },
@@ -32,7 +33,8 @@ const GODS_LIST = [
 ]
 
 export default function DashboardScreen({ onStartChanting, onPressStreak }) {
-  const { userToken, currentNaam, totalCount, todayCount, sessionCount, logout, dailyGoal, setStats, setNaam, incrementTap, addManualCount, lastUnlockedLevel, showLevelModal, unlockedLevelInfo, setShowLevelModal, isDarkMode, language, customNaams, fetchCustomNaams, addCustomNaam, isBlackoutMode, setIsBlackoutMode } = useStore();
+  const { userToken, currentNaam, totalCount, todayCount, sessionCount, logout, dailyGoal, setStats, setNaam, incrementTap, addManualCount, lastUnlockedLevel, showLevelModal, unlockedLevelInfo, setShowLevelModal, isDarkMode, language, customNaams, fetchCustomNaams, addCustomNaam, isBlackoutMode, setIsBlackoutMode, themeId, goals } = useStore();
+  const theme = getTheme(themeId);
   const [loading, setLoading] = useState(false);
   const [synced, setSynced] = useState(true);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -50,7 +52,7 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
   const handleSaveCustomNaam = async () => {
     if (!customNaamInput || customNaamInput.trim() === '') {
       return Alert.alert(
-        getTranslation(language, 'appName'), 
+        getTranslation(language, 'appName'),
         getTranslation(language, 'nameCannotBeEmpty')
       );
     }
@@ -68,7 +70,7 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
       }
 
       Alert.alert(
-        getTranslation(language, 'appName'), 
+        getTranslation(language, 'appName'),
         errorMsg
       );
     }
@@ -228,31 +230,33 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
   }
 
   return (
-    <SafeAreaView style={[styles.container, isDarkMode && styles.darkContainer]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.header}>
-        <Text style={[styles.headerTitle, isDarkMode && styles.darkHeaderTitle]}>{getTranslation(language, 'appName')}</Text>
+        <Text style={[styles.headerTitle, { color: theme.accent }]}>
+          {getTranslation(language, 'appName')}
+        </Text>
         <View style={styles.headerRight}>
           <TouchableOpacity style={styles.streakBadgeWrapper} onPress={onPressStreak}>
-            <View style={[styles.streakCircle, isDarkMode && styles.darkStreakCircle]}>
-              <Text style={[styles.streakCircleText, isDarkMode && styles.darkStreakCircleText]}>{currentStreak}</Text>
+            <View style={[styles.streakCircle, { backgroundColor: theme.accent }]}>
+              <Text style={[styles.streakCircleText, { color: '#FFFFFF' }]}>{currentStreak}</Text>
             </View>
             <Text style={styles.streakFlame}>🔥</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.menuButton} onPress={() => setIsMenuVisible(true)}>
-            <Text style={[styles.menuIcon, isDarkMode && styles.darkMenuIcon]}>☰</Text>
+            <Text style={[styles.menuIcon, { color: theme.accent }]}>☰</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       {!synced && (
         <View style={{ alignItems: 'center', marginBottom: 10 }}>
-          <Text style={{ color: isDarkMode ? '#FFFFFF' : '#FF6B35', fontSize: 12 }}>{getTranslation(language, 'offlineMode')}</Text>
+          <Text style={{ color: theme.accent, fontSize: 12 }}>{getTranslation(language, 'offlineMode')}</Text>
         </View>
       )}
 
       {/* Background sync indicator (optional, very subtle) */}
       {loading && (
-        <ActivityIndicator size="small" color={isDarkMode ? "#FFFFFF" : "#FF6B35"} style={{ position: 'absolute', top: 20, right: 24 }} />
+        <ActivityIndicator size="small" color={theme.accent} style={{ position: 'absolute', top: 20, right: 24 }} />
       )}
 
       <View style={styles.chantingInfo}>
@@ -264,7 +268,7 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
               textAlign: 'center',
               paddingHorizontal: 20,
               opacity: isNaamHidden ? 0 : 1,
-              color: isDarkMode ? '#FFFFFF' : '#FF6B35'
+              color: theme.accent
             }
           ]}
           numberOfLines={4}
@@ -273,7 +277,7 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
           {currentNaam?.name || 'Krishna'}
         </Text>
         <TouchableOpacity onPress={() => setIsModalVisible(true)} disabled={isNaamHidden} style={{ opacity: isNaamHidden ? 0 : 1 }}>
-          <Text style={[styles.changeNameText, isDarkMode && styles.darkChangeNameText]}>{getTranslation(language, 'changeName')}</Text>
+          <Text style={[styles.changeNameText, { color: theme.secondaryText }]}>{getTranslation(language, 'changeName')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -285,10 +289,10 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
         <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center', marginBottom: 40 }}>
           <Svg width={size} height={size} style={{ position: 'absolute' }}>
             {/* Background Ring */}
-            <Circle stroke={isDarkMode ? "#333333" : "#FFE6D3"} fill="none" cx={size / 2} cy={size / 2} r={radius} strokeWidth={strokeWidth} />
+            <Circle stroke={theme.id === 'darkTemple' ? "#2D2D2D" : theme.border} fill="none" cx={size / 2} cy={size / 2} r={radius} strokeWidth={strokeWidth} />
             {/* Foreground Progress Ring */}
             <Circle
-              stroke={isDarkMode ? "#FFFFFF" : "#FF6B35"}
+              stroke={theme.accent}
               fill="none"
               cx={size / 2} cy={size / 2} r={radius} strokeWidth={strokeWidth}
               strokeDasharray={`${circumference} ${circumference}`}
@@ -299,44 +303,44 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
           </Svg>
 
           <View style={styles.circleInner}>
-            <Text style={[styles.countText, isDarkMode && styles.darkCountText]}>{currentMalaProgress}/108</Text>
+            <Text style={[styles.countText, { color: theme.primaryText }]}>{currentMalaProgress}/108</Text>
           </View>
         </View>
       </TouchableOpacity>
 
       <View style={styles.statsCardWrapper}>
-        <View style={[styles.statsCard, isDarkMode && styles.darkCardRow]}>
+        <View style={[styles.statsCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
           <View style={styles.statColumn}>
-            <Text style={[styles.statNumber, isDarkMode && styles.darkStatNumber]}>{displayTotalMalas}</Text>
-            <Text style={[styles.statLabel, isDarkMode && styles.darkStatLabel]}>{getTranslation(language, 'malas')}</Text>
+            <Text style={[styles.statNumber, { color: theme.accent }]}>{displayTotalMalas}</Text>
+            <Text style={[styles.statLabel, { color: theme.secondaryText }]}>{getTranslation(language, 'malas')}</Text>
           </View>
 
-          <View style={[styles.verticalDivider, isDarkMode && { backgroundColor: '#333333' }]} />
+          <View style={[styles.verticalDivider, { backgroundColor: theme.border }]} />
 
           <View style={styles.statColumn}>
-            {todayCount >= dailyGoal ? (
+            {todayCount >= goals.daily ? (
               <>
-                <Text style={[styles.statNumber, { color: isDarkMode ? '#FFFFFF' : '#00BFA5' }]}>
+                <Text style={[styles.statNumber, { color: theme.success }]}>
                   {todayCount}
                 </Text>
-                <Text style={[styles.statLabel, { color: isDarkMode ? '#FFFFFF' : '#00BFA5', fontWeight: 'bold' }]}>✅ {getTranslation(language, 'goalMet')}</Text>
+                <Text style={[styles.statLabel, { color: theme.success, fontWeight: 'bold' }]}>✅ {getTranslation(language, 'goalMet')}</Text>
               </>
             ) : (
               <>
-                <Text style={[styles.statNumber, isDarkMode && styles.darkStatNumber]}>
+                <Text style={[styles.statNumber, { color: theme.accent }]}>
                   {todayCount}
-                  <Text style={{ fontSize: 14, color: '#A0A0A0' }}>{` / ${dailyGoal || 108}`}</Text>
+                  <Text style={{ fontSize: 14, color: theme.secondaryText }}>{` / ${goals.daily || 108}`}</Text>
                 </Text>
-                <Text style={[styles.statLabel, isDarkMode && styles.darkStatLabel]}>{getTranslation(language, 'todayGoal')}</Text>
+                <Text style={[styles.statLabel, { color: theme.secondaryText }]}>{getTranslation(language, 'todayGoal')}</Text>
               </>
             )}
           </View>
 
-          <View style={[styles.verticalDivider, isDarkMode && { backgroundColor: '#333333' }]} />
+          <View style={[styles.verticalDivider, { backgroundColor: theme.border }]} />
 
           <View style={styles.statColumn}>
-            <Text style={[styles.statNumber, isDarkMode && styles.darkStatNumber]}>{totalCount}</Text>
-            <Text style={[styles.statLabel, isDarkMode && styles.darkStatLabel]}>{getTranslation(language, 'totalCount')}</Text>
+            <Text style={[styles.statNumber, { color: theme.accent }]}>{totalCount}</Text>
+            <Text style={[styles.statLabel, { color: theme.secondaryText }]}>{getTranslation(language, 'totalCount')}</Text>
           </View>
         </View>
       </View>
@@ -414,120 +418,158 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
         transparent={true}
         onRequestClose={() => setIsMenuVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, isDarkMode && styles.darkModalContent, { height: 440 }]}>
-            {/* Native Drag Handle */}
-            <View style={[styles.modalDragHandle, isDarkMode && styles.darkModalDragHandle]} />
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setIsMenuVisible(false)}
+        >
+          <TouchableWithoutFeedback>
+            <View style={[styles.modalContent, isDarkMode && styles.darkModalContent, { height: 570 }]}>
+              {/* Native Drag Handle */}
+              <View style={[styles.modalDragHandle, isDarkMode && styles.darkModalDragHandle]} />
 
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, isDarkMode && styles.darkModalTitle]}>{getTranslation(language, 'options')}</Text>
-              <TouchableOpacity onPress={() => setIsMenuVisible(false)}>
-                <Ionicons name="close-circle-outline" size={24} color={isDarkMode ? "#FFFFFF" : "#8E8E8E"} />
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, isDarkMode && styles.darkModalTitle]}>{getTranslation(language, 'options')}</Text>
+                <TouchableOpacity onPress={() => setIsMenuVisible(false)}>
+                  <Ionicons name="close-circle-outline" size={24} color={isDarkMode ? "#FFFFFF" : "#8E8E8E"} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Log Physical Mala */}
+              <TouchableOpacity
+                style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]}
+                onPress={() => {
+                  setIsMenuVisible(false);
+                  setIsLogMalaModalVisible(true);
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.menuIconWrapper, { backgroundColor: isDarkMode ? '#2C1B10' : '#FFF2E6' }]}>
+                  <Svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={isDarkMode ? "#FF8C5A" : "#FF6B35"} strokeWidth="2.2">
+                    <Circle cx="12" cy="5" r="2" />
+                    <Circle cx="16.5" cy="7" r="2" />
+                    <Circle cx="19" cy="11.5" r="2" />
+                    <Circle cx="17.5" cy="16.5" r="2" />
+                    <Circle cx="13" cy="19.5" r="2" />
+                    <Circle cx="8" cy="19.5" r="2" />
+                    <Circle cx="4.5" cy="15.5" r="2" />
+                    <Circle cx="5" cy="10.5" r="2" />
+                    <Circle cx="7.5" cy="6.5" r="2" />
+                  </Svg>
+                </View>
+                <View style={styles.menuOptionTextContainer}>
+                  <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{getTranslation(language, 'addCount')}</Text>
+                  <Text style={[styles.menuOptionSubtitle, isDarkMode && styles.darkMenuOptionSubtitle]}>{getTranslation(language, 'addCountSub')}</Text>
+                </View>
+                <Ionicons name="chevron-forward-outline" size={16} color={isDarkMode ? "#555555" : "#CCCCCC"} />
               </TouchableOpacity>
+
+              {/* Hide/Show Naam */}
+              <TouchableOpacity
+                style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]}
+                onPress={() => {
+                  setIsNaamHidden(!isNaamHidden);
+                  setIsMenuVisible(false);
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.menuIconWrapper, { backgroundColor: isDarkMode ? '#1D2530' : '#EBF8FF' }]}>
+                  {isNaamHidden ? (
+                    <Svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={isDarkMode ? "#63B3ED" : "#3182CE"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <Path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <Circle cx="12" cy="12" r="3" />
+                    </Svg>
+                  ) : (
+                    <Svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={isDarkMode ? "#63B3ED" : "#3182CE"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <Path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                      <Line x1="1" y1="1" x2="23" y2="23" />
+                    </Svg>
+                  )}
+                </View>
+                <View style={styles.menuOptionTextContainer}>
+                  <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{isNaamHidden ? getTranslation(language, 'showNaam') : getTranslation(language, 'hideNaam')}</Text>
+                  <Text style={[styles.menuOptionSubtitle, isDarkMode && styles.darkMenuOptionSubtitle]}>{isNaamHidden ? getTranslation(language, 'showNaamSub') : getTranslation(language, 'hideNaamSub')}</Text>
+                </View>
+                <Ionicons name="chevron-forward-outline" size={16} color={isDarkMode ? "#555555" : "#CCCCCC"} />
+              </TouchableOpacity>
+
+              {/* Set Timer */}
+              <TouchableOpacity
+                style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]}
+                onPress={() => {
+                  setIsMenuVisible(false);
+                  setIsTimerModalVisible(true);
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.menuIconWrapper, { backgroundColor: isDarkMode ? '#241B35' : '#F3E8FF' }]}>
+                  <Svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={isDarkMode ? "#B794F4" : "#805AD5"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <Circle cx="12" cy="12" r="10" />
+                    <Polyline points="12 6 12 12 16 14" />
+                  </Svg>
+                </View>
+                <View style={styles.menuOptionTextContainer}>
+                  <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{getTranslation(language, 'setTimer')}</Text>
+                  <Text style={[styles.menuOptionSubtitle, isDarkMode && styles.darkMenuOptionSubtitle]}>{getTranslation(language, 'setTimerSub')}</Text>
+                </View>
+                <Ionicons name="chevron-forward-outline" size={16} color={isDarkMode ? "#555555" : "#CCCCCC"} />
+              </TouchableOpacity>
+
+              {/* Blackout Mode */}
+              <TouchableOpacity
+                style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]}
+                onPress={() => {
+                  setIsMenuVisible(false);
+                  setIsBlackoutMode(true);
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.menuIconWrapper, { backgroundColor: isDarkMode ? '#222222' : '#F7FAFC' }]}>
+                  <Svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={isDarkMode ? "#E2E8F0" : "#4A5568"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <Circle cx="12" cy="12" r="10" fill={isDarkMode ? "#E2E8F0" : "#4A5568"} />
+                  </Svg>
+                </View>
+                <View style={styles.menuOptionTextContainer}>
+                  <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{getTranslation(language, 'blackoutMode')}</Text>
+                  <Text style={[styles.menuOptionSubtitle, isDarkMode && styles.darkMenuOptionSubtitle]}>{getTranslation(language, 'blackoutModeSub')}</Text>
+                </View>
+                <Ionicons name="chevron-forward-outline" size={16} color={isDarkMode ? "#555555" : "#CCCCCC"} />
+              </TouchableOpacity>
+
+              {/* App Theme Selector */}
+              <View style={{ borderTopWidth: 1, borderTopColor: theme.border, marginTop: 12, paddingTop: 12 }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: theme.secondaryText, marginBottom: 8, paddingHorizontal: 4 }}>
+                  {language === 'hi' ? 'ऐप थीम बदलें' : 'SELECT APP THEME'}
+                </Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 4 }}>
+                  {Object.values(THEMES).map((t) => {
+                    const isSelected = t.id === themeId;
+                    return (
+                      <TouchableOpacity
+                        key={t.id}
+                        style={{
+                          width: 110,
+                          height: 54,
+                          borderRadius: 12,
+                          backgroundColor: t.background,
+                          borderColor: isSelected ? t.accent : t.border,
+                          borderWidth: isSelected ? 2.5 : 1,
+                          padding: 8,
+                          marginRight: 10,
+                          justifyContent: 'space-between'
+                        }}
+                        onPress={() => useStore.getState().setThemeId(t.id)}
+                      >
+                        <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: t.accent, alignSelf: 'flex-end' }} />
+                        <Text style={{ fontSize: 10, fontWeight: 'bold', color: t.primaryText }}>{t.name.split(' ')[0]}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
             </View>
-
-            {/* Log Physical Mala */}
-            <TouchableOpacity
-              style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]}
-              onPress={() => {
-                setIsMenuVisible(false);
-                setIsLogMalaModalVisible(true);
-              }}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.menuIconWrapper, { backgroundColor: isDarkMode ? '#2C1B10' : '#FFF2E6' }]}>
-                <Svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={isDarkMode ? "#FF8C5A" : "#FF6B35"} strokeWidth="2.2">
-                  <Circle cx="12" cy="5" r="2" />
-                  <Circle cx="16.5" cy="7" r="2" />
-                  <Circle cx="19" cy="11.5" r="2" />
-                  <Circle cx="17.5" cy="16.5" r="2" />
-                  <Circle cx="13" cy="19.5" r="2" />
-                  <Circle cx="8" cy="19.5" r="2" />
-                  <Circle cx="4.5" cy="15.5" r="2" />
-                  <Circle cx="5" cy="10.5" r="2" />
-                  <Circle cx="7.5" cy="6.5" r="2" />
-                </Svg>
-              </View>
-              <View style={styles.menuOptionTextContainer}>
-                <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{getTranslation(language, 'addCount')}</Text>
-                <Text style={[styles.menuOptionSubtitle, isDarkMode && styles.darkMenuOptionSubtitle]}>{getTranslation(language, 'addCountSub')}</Text>
-              </View>
-              <Ionicons name="chevron-forward-outline" size={16} color={isDarkMode ? "#555555" : "#CCCCCC"} />
-            </TouchableOpacity>
-
-            {/* Hide/Show Naam */}
-            <TouchableOpacity
-              style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]}
-              onPress={() => {
-                setIsNaamHidden(!isNaamHidden);
-                setIsMenuVisible(false);
-              }}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.menuIconWrapper, { backgroundColor: isDarkMode ? '#1D2530' : '#EBF8FF' }]}>
-                {isNaamHidden ? (
-                  <Svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={isDarkMode ? "#63B3ED" : "#3182CE"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <Path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                    <Circle cx="12" cy="12" r="3" />
-                  </Svg>
-                ) : (
-                  <Svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={isDarkMode ? "#63B3ED" : "#3182CE"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <Path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                    <Line x1="1" y1="1" x2="23" y2="23" />
-                  </Svg>
-                )}
-              </View>
-              <View style={styles.menuOptionTextContainer}>
-                <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{isNaamHidden ? getTranslation(language, 'showNaam') : getTranslation(language, 'hideNaam')}</Text>
-                <Text style={[styles.menuOptionSubtitle, isDarkMode && styles.darkMenuOptionSubtitle]}>{isNaamHidden ? getTranslation(language, 'showNaamSub') : getTranslation(language, 'hideNaamSub')}</Text>
-              </View>
-              <Ionicons name="chevron-forward-outline" size={16} color={isDarkMode ? "#555555" : "#CCCCCC"} />
-            </TouchableOpacity>
-
-            {/* Set Timer */}
-            <TouchableOpacity
-              style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]}
-              onPress={() => {
-                setIsMenuVisible(false);
-                setIsTimerModalVisible(true);
-              }}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.menuIconWrapper, { backgroundColor: isDarkMode ? '#241B35' : '#F3E8FF' }]}>
-                <Svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={isDarkMode ? "#B794F4" : "#805AD5"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <Circle cx="12" cy="12" r="10" />
-                  <Polyline points="12 6 12 12 16 14" />
-                </Svg>
-              </View>
-              <View style={styles.menuOptionTextContainer}>
-                <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{getTranslation(language, 'setTimer')}</Text>
-                <Text style={[styles.menuOptionSubtitle, isDarkMode && styles.darkMenuOptionSubtitle]}>{getTranslation(language, 'setTimerSub')}</Text>
-              </View>
-              <Ionicons name="chevron-forward-outline" size={16} color={isDarkMode ? "#555555" : "#CCCCCC"} />
-            </TouchableOpacity>
-
-            {/* Blackout Mode */}
-            <TouchableOpacity
-              style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]}
-              onPress={() => {
-                setIsMenuVisible(false);
-                setIsBlackoutMode(true);
-              }}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.menuIconWrapper, { backgroundColor: isDarkMode ? '#222222' : '#F7FAFC' }]}>
-                <Svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={isDarkMode ? "#E2E8F0" : "#4A5568"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <Circle cx="12" cy="12" r="10" fill={isDarkMode ? "#E2E8F0" : "#4A5568"} />
-                </Svg>
-              </View>
-              <View style={styles.menuOptionTextContainer}>
-                <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{getTranslation(language, 'blackoutMode')}</Text>
-                <Text style={[styles.menuOptionSubtitle, isDarkMode && styles.darkMenuOptionSubtitle]}>{getTranslation(language, 'blackoutModeSub')}</Text>
-              </View>
-              <Ionicons name="chevron-forward-outline" size={16} color={isDarkMode ? "#555555" : "#CCCCCC"} />
-            </TouchableOpacity>
-          </View>
-        </View>
+          </TouchableWithoutFeedback>
+        </TouchableOpacity>
       </Modal>
 
 
@@ -655,7 +697,15 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
             <View style={[styles.levelHighlightBox, isDarkMode && styles.darkLevelHighlightBox]}>
               <Text style={[styles.levelHighlightTitle, isDarkMode && styles.darkLevelHighlightTitle]}>{getTranslation(language, 'newLevelLabel')}</Text>
               <Text style={[styles.levelHighlightVal, isDarkMode && styles.darkLevelHighlightVal]}>
-                {unlockedLevelInfo?.name ? getTranslation(language, `level_${unlockedLevelInfo.name.replace(/\s+/g, '')}`) : ''}
+                {unlockedLevelInfo?.name ? (() => {
+                  const name = unlockedLevelInfo.name;
+                  const match = name.match(/^(Ananda Master|Koti Master)\s+Lvl\s+(\d+)$/);
+                  if (match) {
+                    const key = match[1] === 'Koti Master' ? 'level_KotiMaster' : 'level_AnandaMaster';
+                    return `${getTranslation(language, key)} Lvl ${match[2]}`;
+                  }
+                  return getTranslation(language, `level_${name.replace(/\s+/g, '')}`);
+                })() : ''}
               </Text>
               <Text style={[styles.levelHighlightSub, isDarkMode && styles.darkLevelHighlightSub]}>
                 {getTranslation(language, 'unlockedAtLabel', { target: unlockedLevelInfo?.target.toLocaleString() })}

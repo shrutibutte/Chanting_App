@@ -155,7 +155,7 @@ export const translations = {
     sat: "Sat",
     sun: "Sun",
     streakMaintained: "Streak Maintained!",
-    streakToastMsg: "Great job, you've already completed today's chanting and secured your streak.",
+    streakToastMsg: "Great job! You've already completed today's streak.",
     congratulations: "Congratulations!",
     celebrationMsg: "You have successfully completed today's chanting target and maintained your streak!",
     continue: "Continue",
@@ -190,6 +190,10 @@ export const translations = {
     level_DivineSage: "Divine Sage",
     level_EnlightenedSoul: "Enlightened Soul",
     level_AnandaMaster: "Ananda Master",
+    level_JapaYogi: "Japa Yogi",
+    level_BhaktiSage: "Bhakti Sage",
+    level_SiddhaChanter: "Siddha Chanter",
+    level_KotiMaster: "Koti Master (1 Crore)",
   },
   hi: {
     // General / Bottom Tabs
@@ -382,6 +386,10 @@ export const translations = {
     level_DivineSage: "दिव्य ऋषि",
     level_EnlightenedSoul: "प्रबुद्ध आत्मा",
     level_AnandaMaster: "आनंद स्वामी",
+    level_JapaYogi: "जप योगी (१० लाख)",
+    level_BhaktiSage: "भक्ति ऋषि (२५ लाख)",
+    level_SiddhaChanter: "सिद्ध जपकर्ता (५० लाख)",
+    level_KotiMaster: "कोटि स्वामी (१ करोड़)",
   },
   mr: {
     // General / Bottom Tabs
@@ -574,6 +582,10 @@ export const translations = {
     level_DivineSage: "दिव्य ऋषी",
     level_EnlightenedSoul: "प्रबुद्ध आत्मा",
     level_AnandaMaster: "आनंद स्वामी",
+    level_JapaYogi: "जप योगी (१० लाख)",
+    level_BhaktiSage: "भक्ती ऋषी (२५ लाख)",
+    level_SiddhaChanter: "सिद्ध जपकर्ता (५० लाख)",
+    level_KotiMaster: "कोटि स्वामी (१ कोटी)",
   }
 };
 

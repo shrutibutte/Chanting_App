@@ -4,9 +4,11 @@ import Svg, { Path } from 'react-native-svg';
 import { useStore } from '../store/useStore';
 import { getLocalDateString } from '../utils/date.js';
 import { getTranslation } from '../utils/translations';
+import { getTheme } from '../utils/themes';
 
 export default function StreakScreen({onExit}) {
-  const { historyRecords, todayCount, isDarkMode, language } = useStore();
+  const { historyRecords, todayCount, language, themeId } = useStore();
+  const theme = getTheme(themeId);
   const [currentMonthDate, setCurrentMonthDate] = useState(new Date());
 
   const { groupedByDate, currentStreak, bestStreak, weekTicks } = useMemo(() => {
@@ -159,60 +161,60 @@ export default function StreakScreen({onExit}) {
     onExit();
   };
   return (
-    <SafeAreaView style={[styles.container, isDarkMode && styles.darkContainer]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.header}>
         {/* back button  */}
-        <TouchableOpacity style={[styles.exitButton, isDarkMode && styles.darkExitButton]} onPress={handleExit}>
-          <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={isDarkMode ? "#FFFFFF" : "#FF6B35"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <TouchableOpacity style={[styles.exitButton, { borderColor: theme.accent, backgroundColor: theme.card }]} onPress={handleExit}>
+          <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={theme.accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <Path d="M9 14L4 9l5-5" />
             <Path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11" />
           </Svg>
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, isDarkMode && styles.darkHeaderTitle]}>{getTranslation(language, 'streak')}</Text>
+        <Text style={[styles.headerTitle, { color: theme.primaryText }]}>{getTranslation(language, 'streak')}</Text>
       </View>
       <ScrollView contentContainerStyle={styles.scroll}>
         
         {/* Streak Row */}
         <View style={styles.streakRow}>
           {/* Current Streak Card */}
-          <View style={[styles.streakBox, styles.currentStreakBox, isDarkMode && styles.darkCurrentStreakBox]}>
+          <View style={[styles.streakBox, { backgroundColor: theme.accent, marginRight: 6 }]}>
             <View style={styles.streakBoxHeader}>
               <Text style={styles.flameIcon}>🔥</Text>
-              <Text style={[styles.currentStreakTitle, isDarkMode && styles.darkStreakTitle]}>{getTranslation(language, 'current')}</Text>
+              <Text style={[styles.currentStreakTitle, { color: '#FFFFFF' }]}>{getTranslation(language, 'current')}</Text>
             </View>
-            <Text style={[styles.currentStreakNumber, isDarkMode && styles.darkStreakNumber]}>{currentStreak}</Text>
-            <Text style={[styles.currentStreakDays, isDarkMode && styles.darkStreakDays]}>{getTranslation(language, 'days')}</Text>
+            <Text style={[styles.currentStreakNumber, { color: '#FFFFFF' }]}>{currentStreak}</Text>
+            <Text style={[styles.currentStreakDays, { color: 'rgba(255,255,255,0.7)' }]}>{getTranslation(language, 'days')}</Text>
           </View>
 
           {/* Best Streak Card */}
-          <View style={[styles.streakBox, styles.bestStreakBox, isDarkMode && styles.darkBestStreakBox]}>
+          <View style={[styles.streakBox, { backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1, marginLeft: 6 }]}>
             <View style={styles.streakBoxHeader}>
               <Text style={styles.trophyIcon}>🏆</Text>
-              <Text style={[styles.bestStreakTitle, isDarkMode && styles.darkBestStreakTitle]}>{getTranslation(language, 'best')}</Text>
+              <Text style={[styles.bestStreakTitle, { color: theme.secondaryText }]}>{getTranslation(language, 'best')}</Text>
             </View>
-            <Text style={[styles.bestStreakNumber, isDarkMode && styles.darkBestStreakNumber]}>{bestStreak}</Text>
-            <Text style={[styles.bestStreakDays, isDarkMode && styles.darkBestStreakDays]}>{getTranslation(language, 'days')}</Text>
+            <Text style={[styles.bestStreakNumber, { color: theme.primaryText }]}>{bestStreak}</Text>
+            <Text style={[styles.bestStreakDays, { color: theme.secondaryText }]}>{getTranslation(language, 'days')}</Text>
           </View>
         </View>
 
         {/* This Week Card */}
-        <View style={[styles.card, isDarkMode && styles.darkCard]}>
-          <Text style={[styles.cardHeader, isDarkMode && styles.darkCardHeader]}>🔥 {getTranslation(language, 'thisWeek')}</Text>
+        <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1 }]}>
+          <Text style={[styles.cardHeader, { color: theme.primaryText }]}>🔥 {getTranslation(language, 'thisWeek')}</Text>
 
           <View style={styles.ticksContainer}>
             {weekTicks.map((tick, index) => (
               <View key={index} style={styles.tickCol}>
-                <Text style={[styles.tickLabel, isDarkMode && styles.darkTickLabel]}>{tick.label}</Text>
+                <Text style={[styles.tickLabel, { color: theme.secondaryText }]}>{tick.label}</Text>
                 <View style={[
                   styles.tickCircle, 
                   tick.active 
-                    ? (isDarkMode ? styles.darkTickActive : styles.tickActive) 
-                    : (isDarkMode ? styles.darkTickInactive : styles.tickInactive)
+                    ? { backgroundColor: theme.accent } 
+                    : { backgroundColor: theme.id === 'darkTemple' ? '#111111' : '#F7F7F7', borderColor: theme.border, borderWidth: theme.id === 'darkTemple' ? 1 : 0 }
                 ]}>
                   {tick.active ? (
-                    <Text style={[styles.tickCheck, isDarkMode && styles.darkTickCheck]}>✓</Text>
+                    <Text style={[styles.tickCheck, { color: '#FFFFFF' }]}>✓</Text>
                   ) : (
-                    <Text style={[styles.tickClock, isDarkMode && styles.darkTickClock]}>◷</Text>
+                    <Text style={[styles.tickClock, { color: theme.id === 'darkTemple' ? '#555555' : '#D0D0D0' }]}>◷</Text>
                   )}
                 </View>
               </View>
@@ -220,20 +222,20 @@ export default function StreakScreen({onExit}) {
           </View>
 
           {/* Motivational Footer */}
-          <View style={[styles.motivationalBox, isDarkMode && styles.darkMotivationalBox]}>
-            <Text style={[styles.motivationalText, isDarkMode && styles.darkMotivationalText]}>🔥 {getTranslation(language, 'keepStreak')} 🔥</Text>
+          <View style={[styles.motivationalBox, { backgroundColor: theme.id === 'darkTemple' ? '#111111' : '#FFF2E6', borderColor: theme.id === 'darkTemple' ? '#222222' : '#FFE6D3' }]}>
+            <Text style={[styles.motivationalText, { color: theme.accent }]}>🔥 {getTranslation(language, 'keepStreak')} 🔥</Text>
           </View>
         </View>
 
         {/* Calendar Card */}
-        <View style={[styles.card, isDarkMode && styles.darkCard]}>
+        <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1 }]}>
           <View style={styles.calendarHeader}>
-            <TouchableOpacity onPress={prevMonth} style={[styles.navButton, isDarkMode && styles.darkNavButton]}>
-              <Text style={[styles.navButtonText, isDarkMode && styles.darkNavButtonText]}>{'<'}</Text>
+            <TouchableOpacity onPress={prevMonth} style={[styles.navButton, { backgroundColor: theme.id === 'darkTemple' ? '#222222' : '#F0EBE5' }]}>
+              <Text style={[styles.navButtonText, { color: theme.primaryText }]}>{'<'}</Text>
             </TouchableOpacity>
-            <Text style={[styles.calendarTitle, isDarkMode && styles.darkCalendarTitle]}>{monthName}</Text>
-            <TouchableOpacity onPress={nextMonth} style={[styles.navButton, isDarkMode && styles.darkNavButton]}>
-              <Text style={[styles.navButtonText, isDarkMode && styles.darkNavButtonText]}>{'>'}</Text>
+            <Text style={[styles.calendarTitle, { color: theme.primaryText }]}>{monthName}</Text>
+            <TouchableOpacity onPress={nextMonth} style={[styles.navButton, { backgroundColor: theme.id === 'darkTemple' ? '#222222' : '#F0EBE5' }]}>
+              <Text style={[styles.navButtonText, { color: theme.primaryText }]}>{'>'}</Text>
             </TouchableOpacity>
           </View>
 
@@ -241,7 +243,7 @@ export default function StreakScreen({onExit}) {
             {/* Days of week */}
             {dayHeaders.map((day, idx) => (
               <View key={idx} style={styles.calHeaderCell}>
-                <Text style={[styles.calHeaderText, isDarkMode && styles.darkCalHeaderText]}>{day}</Text>
+                <Text style={[styles.calHeaderText, { color: theme.secondaryText }]}>{day}</Text>
               </View>
             ))}
             
@@ -252,14 +254,13 @@ export default function StreakScreen({onExit}) {
                   <View style={[
                     styles.calDayCircle, 
                     dayObj.active 
-                      ? (isDarkMode ? styles.darkCalDayActive : styles.calDayActive)
+                      ? { backgroundColor: theme.accent }
                       : null
                   ]}>
                     <Text style={[
                       styles.calDayText, 
-                      isDarkMode && styles.darkCalDayText,
-                      dayObj.active && styles.calDayTextActive,
-                      dayObj.active && isDarkMode && styles.darkCalDayTextActive
+                      { color: dayObj.active ? '#FFFFFF' : theme.primaryText },
+                      dayObj.active && { fontWeight: 'bold' }
                     ]}>
                       {dayObj.dayNumber}
                     </Text>
