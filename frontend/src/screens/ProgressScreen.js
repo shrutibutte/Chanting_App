@@ -32,7 +32,7 @@ function getStreakOnDay(dateStr, grouped) {
   let streak = 0;
   let checkDate = new Date(dateStr + 'T00:00:00');
   let cStr = getLocalDateString(checkDate);
-  
+
   while (grouped[cStr] > 0) {
     streak++;
     checkDate.setDate(checkDate.getDate() - 1);
@@ -81,14 +81,67 @@ export default function ProgressScreen() {
     return grouped;
   }, [historyRecords, todayCount]);
 
+  // Reset navigation when switching tabs to ensure clean state
+  useEffect(() => {
+    if (activeView === 'calendar') {
+      setTimeRange('monthly');
+      setOffset(0);
+    }
+  }, [activeView]);
+
+  // Calendar Heatmap calculations
+  const calendarCells = useMemo(() => {
+    if (activeView !== 'calendar') return [];
+
+    const today = new Date();
+    const targetMonth = new Date(today.getFullYear(), today.getMonth() + offset, 1);
+    const year = targetMonth.getFullYear();
+    const month = targetMonth.getMonth();
+
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const firstDay = new Date(year, month, 1);
+    const firstWeekday = firstDay.getDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
+    const leadingEmptyCells = firstWeekday === 0 ? 6 : firstWeekday - 1;
+
+    const cells = [];
+    for (let i = 0; i < leadingEmptyCells; i++) {
+      cells.push({ isEmpty: true, key: `empty-${i}` });
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const d = new Date(year, month, day);
+      const dateStr = getLocalDateString(d);
+      const count = groupedByDate[dateStr] || 0;
+      cells.push({
+        isEmpty: false,
+        key: dateStr,
+        date: d,
+        dateStr,
+        count,
+        dayNum: day
+      });
+    }
+    return cells;
+  }, [activeView, offset, groupedByDate]);
+
+  // Split calendar cells into weeks (rows of 7 days)
+  const calendarWeeks = useMemo(() => {
+    const weeks = [];
+    for (let i = 0; i < calendarCells.length; i += 7) {
+      weeks.push(calendarCells.slice(i, i + 7));
+    }
+    return weeks;
+  }, [calendarCells]);
+
   // Comprehensive Statistics Calculations
   const stats = useMemo(() => {
     const datesWithChants = Object.keys(groupedByDate).filter(d => groupedByDate[d] > 0).sort();
-    
+
     let totalAllTime = 0;
     let bestDayCount = 0;
     let bestDayStr = 'N/A';
-    
+
     datesWithChants.forEach(d => {
       const count = groupedByDate[d];
       totalAllTime += count;
@@ -101,15 +154,15 @@ export default function ProgressScreen() {
     // Best Streak (Consecutive days)
     let bestStreak = 0;
     let tempStreak = 0;
-    
+
     if (datesWithChants.length > 0) {
       tempStreak = 1;
       bestStreak = 1;
       for (let i = 1; i < datesWithChants.length; i++) {
-        const prev = new Date(datesWithChants[i-1] + 'T00:00:00');
+        const prev = new Date(datesWithChants[i - 1] + 'T00:00:00');
         const curr = new Date(datesWithChants[i] + 'T00:00:00');
-        const diffDays = Math.ceil(Math.abs(curr - prev) / (1000 * 60 * 60 * 24)); 
-        
+        const diffDays = Math.ceil(Math.abs(curr - prev) / (1000 * 60 * 60 * 24));
+
         if (diffDays === 1) {
           tempStreak++;
           if (tempStreak > bestStreak) bestStreak = tempStreak;
@@ -166,15 +219,15 @@ export default function ProgressScreen() {
     const data = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Normalize to midnight
-    
+
     // Start date is exactly 364 days ago
     const startDate = new Date(today.getTime() - 364 * 86400000);
-    
+
     // Shift start date back to the nearest Monday to align rows nicely
     const day = startDate.getDay();
     const diffToMonday = day === 0 ? -6 : 1 - day;
     startDate.setDate(startDate.getDate() + diffToMonday);
-    
+
     const totalDays = 52 * 7;
     for (let i = 0; i < totalDays; i++) {
       const d = new Date(startDate.getTime() + i * 86400000);
@@ -197,6 +250,43 @@ export default function ProgressScreen() {
     }
     return weeks;
   }, [groupedByDate]);
+
+  // Total chants logged in the last year (sum of contributionGrid cells)
+  const totalChantsLastYear = useMemo(() => {
+    let sum = 0;
+    contributionGrid.forEach(week => {
+      week.forEach(day => {
+        sum += day.count;
+      });
+    });
+    return sum;
+  }, [contributionGrid]);
+
+  // Labels for months to show above the 52-week horizontal grid columns
+  const monthLabels = useMemo(() => {
+    const labels = [];
+    let lastMonth = -1;
+    let lastWeekIdx = -99;
+
+    contributionGrid.forEach((week, weekIndex) => {
+      const firstDayOfWeek = week[0]?.date;
+      if (firstDayOfWeek) {
+        const currentMonth = firstDayOfWeek.getMonth();
+        if (currentMonth !== lastMonth) {
+          // Only add month label if it's at least 3 weeks away from the previous label
+          if (weekIndex - lastWeekIdx >= 3) {
+            labels.push({
+              weekIndex,
+              name: firstDayOfWeek.toLocaleDateString(language === 'hi' ? 'hi-IN' : 'en-US', { month: 'short' })
+            });
+            lastMonth = currentMonth;
+            lastWeekIdx = weekIndex;
+          }
+        }
+      }
+    });
+    return labels;
+  }, [contributionGrid, language]);
 
   // Multi-Goal details
   const weeklyTotal = useMemo(() => getWeeklyChants(historyRecords, todayCount), [historyRecords, todayCount]);
@@ -567,9 +657,9 @@ export default function ProgressScreen() {
                       borderRadius: 16
                     }}
                   />
-                  
+
                   {selectedPoint && (
-                    <View 
+                    <View
                       style={{
                         position: 'absolute',
                         left: selectedPoint.x,
@@ -694,50 +784,174 @@ export default function ProgressScreen() {
         )}
 
         {activeView === 'calendar' && (
-          /* GitHub Contribution Grid */
-          <View style={[styles.gridContainerCard, { backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1 }]}>
-            <Text style={[styles.sectionHeading, { color: theme.primaryText }]}>
-              {language === 'hi' ? 'दैनिक भक्ति रिकॉर्ड' : 'Spiritual Heatmap'}
-            </Text>
-            <Text style={[styles.sectionSub, { color: theme.secondaryText }]}>
-              {language === 'hi' ? 'पिछले ५२ हफ्तों का जाप चार्ट' : 'Chanting frequency of the last 52 weeks'}
-            </Text>
+          <>
+            {/* 1. Monthly Heatmap Card */}
+            <View style={[styles.gridContainerCard, { backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1, marginBottom: 20 }]}>
+              <Text style={[styles.sectionHeading, { color: theme.primaryText }]}>
+                {language === 'hi' ? 'मासिक भक्ति रिकॉर्ड' : 'Monthly Devotion Heatmap'}
+              </Text>
 
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 10 }}>
-              <View style={{ flexDirection: 'column' }}>
-                {Array.from({ length: 7 }).map((_, rowIndex) => (
-                  <View key={rowIndex} style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 2 }}>
-                    <Text style={{ width: 22, fontSize: 10, color: theme.secondaryText, marginRight: 6, textAlign: 'right' }}>
-                      {rowIndex === 0 ? 'M' : rowIndex === 2 ? 'W' : rowIndex === 4 ? 'F' : rowIndex === 6 ? 'S' : ''}
-                    </Text>
-                    {contributionGrid.map((week, weekIndex) => {
-                      const dayData = week[rowIndex];
-                      const color = getIntensityColor(dayData.count, fallbackGoals.daily, theme);
+              {/* Date Navigation */}
+              <View style={[styles.dateNavRow, { marginTop: 12, marginBottom: 16 }]}>
+                <TouchableOpacity
+                  onPress={() => setOffset(o => o - 1)}
+                  style={[styles.navArrowCircle, { backgroundColor: theme.id === 'darkTemple' ? '#111111' : '#FFF2E6', borderColor: theme.border, borderWidth: 1 }]}
+                >
+                  <Text style={[styles.navArrowText, { color: theme.accent }]}>‹</Text>
+                </TouchableOpacity>
+                <View style={styles.dateRangeContainer}>
+                  <Text style={[styles.dateRangeText, { color: theme.primaryText }]}>{dateRangeText}</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => setOffset(o => o + 1)}
+                  disabled={offset === 0}
+                  style={[
+                    styles.navArrowCircle,
+                    { backgroundColor: theme.id === 'darkTemple' ? '#111111' : '#FFF2E6', borderColor: theme.border, borderWidth: 1 },
+                    offset === 0 && styles.navArrowCircleDisabled
+                  ]}
+                >
+                  <Text style={[styles.navArrowText, { color: theme.accent }, offset === 0 && styles.navArrowTextDisabled]}>›</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Weekday Labels (Explicitly styled width boxes matching cells) */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 2, marginBottom: 8 }}>
+                {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((dayLabel, idx) => (
+                  <View key={idx} style={{ width: (screenWidth - 64) / 7 - 4, alignItems: 'center' }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: theme.secondaryText }}>{dayLabel}</Text>
+                  </View>
+                ))}
+              </View>
+
+              {/* Calendar Grid (Guaranteed row layouts to prevent wrapping issues) */}
+              <View style={styles.calendarGrid}>
+                {calendarWeeks.map((week, weekIdx) => (
+                  <View key={weekIdx} style={styles.calendarRow}>
+                    {week.map((cell) => {
+                      if (cell.isEmpty) {
+                        return <View key={cell.key} style={styles.calendarCellEmpty} />;
+                      }
+                      const color = getIntensityColor(cell.count, fallbackGoals.daily, theme);
+                      const isToday = getLocalDateString(new Date()) === cell.dateStr;
                       return (
                         <TouchableOpacity
-                          key={weekIndex}
-                          style={[styles.heatmapCell, { backgroundColor: color }]}
-                          onPress={() => handleDayPress(dayData)}
+                          key={cell.key}
+                          style={[
+                            styles.calendarCell,
+                            { backgroundColor: color },
+                            isToday && { borderColor: theme.accent, borderWidth: 2 }
+                          ]}
+                          onPress={() => handleDayPress(cell)}
                           activeOpacity={0.7}
-                        />
+                        >
+                          <Text style={[
+                            styles.calendarCellText,
+                            { color: cell.count > 0 ? (theme.id === 'darkTemple' ? '#0F1115' : '#FFFFFF') : theme.primaryText, fontWeight: isToday ? 'bold' : 'normal' }
+                          ]}>
+                            {cell.dayNum}
+                          </Text>
+                        </TouchableOpacity>
                       );
                     })}
                   </View>
                 ))}
               </View>
-            </ScrollView>
 
-            {/* Heatmap Legend */}
-            <View style={styles.legendRow}>
-              <Text style={[styles.legendLabel, { color: theme.secondaryText }]}>Less</Text>
-              <View style={[styles.legendCell, { backgroundColor: theme.intensityLevels.none }]} />
-              <View style={[styles.legendCell, { backgroundColor: theme.intensityLevels.low }]} />
-              <View style={[styles.legendCell, { backgroundColor: theme.intensityLevels.medium }]} />
-              <View style={[styles.legendCell, { backgroundColor: theme.intensityLevels.high }]} />
-              <View style={[styles.legendCell, { backgroundColor: theme.intensityLevels.completed }]} />
-              <Text style={[styles.legendLabel, { color: theme.secondaryText }]}>More (Goal Met)</Text>
+              {/* Heatmap Legend */}
+              <View style={[styles.legendRow, { marginTop: 20 }]}>
+                <Text style={[styles.legendLabel, { color: theme.secondaryText }]}>Less</Text>
+                <View style={[styles.legendCell, { backgroundColor: theme.intensityLevels.none }]} />
+                <View style={[styles.legendCell, { backgroundColor: theme.intensityLevels.low }]} />
+                <View style={[styles.legendCell, { backgroundColor: theme.intensityLevels.medium }]} />
+                <View style={[styles.legendCell, { backgroundColor: theme.intensityLevels.high }]} />
+                <View style={[styles.legendCell, { backgroundColor: theme.intensityLevels.completed }]} />
+                <Text style={[styles.legendLabel, { color: theme.secondaryText }]}>More (Goal Met)</Text>
+              </View>
             </View>
-          </View>
+
+            {/* 2. Yearly GitHub Style Heatmap Card */}
+            <View style={[styles.gridContainerCard, { backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1 }]}>
+              {/* GitHub Header style: total chants in the last year */}
+              <Text style={{ fontSize: 13, color: theme.secondaryText, marginBottom: 4 }}>
+                {language === 'hi'
+                  ? `पिछले वर्ष में ${totalChantsLastYear.toLocaleString()} जाप`
+                  : `${totalChantsLastYear.toLocaleString()} chants in the last year`}
+              </Text>
+
+              <Text style={[styles.sectionHeading, { color: theme.primaryText, marginBottom: 12 }]}>
+                {language === 'hi' ? 'वार्षिक भक्ति रिकॉर्ड' : 'Spiritual Heatmap'}
+              </Text>
+
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 10 }}>
+                <View style={{ flexDirection: 'column' }}>
+                  {/* Month Labels Row */}
+                  <View style={{ flexDirection: 'row', marginLeft: 30, marginBottom: 6, height: 16 }}>
+                    {contributionGrid.map((week, weekIndex) => {
+                      const label = monthLabels.find(l => l.weekIndex === weekIndex);
+                      return (
+                        <View key={weekIndex} style={{ width: 14, marginRight: 3 }}>
+                          {label && (
+                            <Text style={{ fontSize: 9, color: theme.secondaryText, position: 'absolute', width: 40, fontWeight: '700' }}>
+                              {label.name}
+                            </Text>
+                          )}
+                        </View>
+                      );
+                    })}
+                  </View>
+
+                  {/* Grid Row */}
+                  <View style={{ flexDirection: 'row' }}>
+                    {/* Weekdays Labels on left (Uses matching height cells to prevent misalignment) */}
+                    <View style={{ flexDirection: 'column', marginRight: 6, justifyContent: 'center' }}>
+                      {Array.from({ length: 7 }).map((_, idx) => (
+                        <View key={idx} style={{ height: 14, marginVertical: 1.5, justifyContent: 'center' }}>
+                          {idx === 1 && <Text style={{ fontSize: 9, color: theme.secondaryText }}>Mon</Text>}
+                          {idx === 3 && <Text style={{ fontSize: 9, color: theme.secondaryText }}>Wed</Text>}
+                          {idx === 5 && <Text style={{ fontSize: 9, color: theme.secondaryText }}>Fri</Text>}
+                        </View>
+                      ))}
+                    </View>
+
+                    {/* Weeks */}
+                    {contributionGrid.map((week, weekIndex) => (
+                      <View key={weekIndex} style={{ flexDirection: 'column', marginRight: 3 }}>
+                        {week.map((dayData, dayIndex) => {
+                          const color = getIntensityColor(dayData.count, fallbackGoals.daily, theme);
+                          return (
+                            <TouchableOpacity
+                              key={dayIndex}
+                              style={{
+                                width: 14,
+                                height: 14,
+                                backgroundColor: color,
+                                borderRadius: 2,
+                                marginVertical: 1.5,
+                              }}
+                              onPress={() => handleDayPress(dayData)}
+                              activeOpacity={0.7}
+                            />
+                          );
+                        })}
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              </ScrollView>
+
+              {/* Heatmap Legend */}
+              <View style={[styles.legendRow, { marginTop: 10 }]}>
+                <Text style={[styles.legendLabel, { color: theme.secondaryText }]}>Less</Text>
+                <View style={[styles.legendCell, { backgroundColor: theme.intensityLevels.none }]} />
+                <View style={[styles.legendCell, { backgroundColor: theme.intensityLevels.low }]} />
+                <View style={[styles.legendCell, { backgroundColor: theme.intensityLevels.medium }]} />
+                <View style={[styles.legendCell, { backgroundColor: theme.intensityLevels.high }]} />
+                <View style={[styles.legendCell, { backgroundColor: theme.intensityLevels.completed }]} />
+                <Text style={[styles.legendLabel, { color: theme.secondaryText }]}>More (Goal Met)</Text>
+              </View>
+            </View>
+          </>
         )}
 
         {activeView === 'history' && (
@@ -1087,7 +1301,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#4A423A',
   },
-  
+
   // Heatmap Grid styling
   gridContainerCard: {
     borderRadius: 24,
@@ -1254,5 +1468,40 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: 'bold',
     fontSize: 15,
+  },
+  calendarWeekdayRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+    marginBottom: 8,
+  },
+  calendarWeekdayText: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  calendarGrid: {
+    flexDirection: 'column',
+  },
+  calendarRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  calendarCell: {
+    width: (screenWidth - 64) / 7 - 4,
+    height: (screenWidth - 64) / 7 - 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  calendarCellEmpty: {
+    width: (screenWidth - 64) / 7 - 4,
+    height: (screenWidth - 64) / 7 - 4,
+  },
+  calendarCellText: {
+    fontSize: 12,
+    fontWeight: '600',
   }
 });
