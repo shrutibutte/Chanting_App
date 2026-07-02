@@ -1,10 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { useStore } from '../store/useStore';
 import { apiCall } from '../api/client';
 import { getTranslation } from '../utils/translations';
-
 import { getTheme } from '../utils/themes';
+
+// Fallback dynamic loading to prevent crashing in Expo Go since native code is missing there
+let GoogleSignin = null;
+let isGoogleAvailable = false;
+try {
+  GoogleSignin = require('@react-native-google-signin/google-signin').GoogleSignin;
+  isGoogleAvailable = !!GoogleSignin;
+} catch (e) {
+  console.log('[Auth] Google Sign-In is not supported in Expo Go environment.');
+}
+
+// Configure your Google Cloud Console Web Client ID here (under credentials page)
+const GOOGLE_WEB_CLIENT_ID = 'YOUR_WEB_CLIENT_ID_HERE.apps.googleusercontent.com';
 
 export default function AuthScreen() {
   const [email, setEmail] = useState('');
@@ -15,6 +27,71 @@ export default function AuthScreen() {
   const language = useStore((state) => state.language);
   const themeId = useStore((state) => state.themeId);
   const theme = getTheme(themeId);
+
+  useEffect(() => {
+    if (isGoogleAvailable && GoogleSignin) {
+      try {
+        GoogleSignin.configure({
+          webClientId: GOOGLE_WEB_CLIENT_ID,
+          offlineAccess: true,
+        });
+      } catch (err) {
+        console.warn('Failed to configure Google Sign-In:', err);
+      }
+    }
+  }, []);
+
+  const handleGoogleLogin = async () => {
+    if (!isGoogleAvailable || !GoogleSignin) {
+      Alert.alert(
+        'Development Build Required',
+        'Google Sign-In requires a custom development build (npx expo run:android or run:ios). It is not supported in standard Expo Go.'
+      );
+      return;
+    }
+    setLoading(true);
+    try {
+      await GoogleSignin.hasPlayServices();
+      const userInfo = await GoogleSignin.signIn();
+      const idToken = userInfo.data?.idToken || userInfo.idToken;
+
+      if (!idToken) {
+        throw new Error('Google Sign-In completed successfully but did not return an ID token.');
+      }
+
+      // Call backend Google login endpoint
+      const data = await apiCall('/auth/google-login', 'POST', { idToken });
+      setLogin(data.token, data.user.email);
+    } catch (error) {
+      console.error('[Google Sign-In Error]:', error);
+      let errorMsg = error.message;
+      if (error.code === 'SIGN_IN_CANCELLED') {
+        errorMsg = 'Google Sign-In was cancelled.';
+      } else if (error.code === 'IN_PROGRESS') {
+        errorMsg = 'Google Sign-In is already in progress.';
+      } else if (error.code === 'PLAY_SERVICES_NOT_AVAILABLE') {
+        errorMsg = 'Google Play Services are not available or outdated.';
+      }
+      Alert.alert(getTranslation(language, 'error'), errorMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLoginMock = async () => {
+    setLoading(true);
+    try {
+      // Direct mock API verification using the developer bypass token
+      const data = await apiCall('/auth/google-login', 'POST', { idToken: 'mock_developer_bypass_token' });
+      setLogin(data.token, data.user.email);
+      Alert.alert('Developer Mode Logged In', `Successfully logged in as: ${data.user.email}`);
+    } catch (error) {
+      console.error('[Developer Mode Google Login Error]:', error);
+      Alert.alert('Developer Mode Error', error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSendOtp = async () => {
     if (!email.includes('@')) return Alert.alert(getTranslation(language, 'invalidEmail'), getTranslation(language, 'enterValidEmail'));
@@ -96,6 +173,20 @@ export default function AuthScreen() {
           </Text>
         )}
       </TouchableOpacity>
+
+      {!isOtpSent && (
+        <TouchableOpacity 
+          style={[styles.googleButton, { backgroundColor: theme.id === 'darkTemple' ? '#1E1E1E' : '#FFFFFF', borderColor: theme.border, borderWidth: 1 }]} 
+          onPress={handleGoogleLogin}
+          onLongPress={handleGoogleLoginMock}
+          delayLongPress={1500}
+          disabled={loading}
+        >
+          <Text style={[styles.googleButtonText, { color: theme.primaryText }]}>
+            Sign in with Google
+          </Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -187,4 +278,21 @@ const styles = StyleSheet.create({
   darkButtonText: {
     color: '#000000',
   },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 16,
+    marginTop: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  googleButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  }
 });

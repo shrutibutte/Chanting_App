@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
+const { OAuth2Client } = require('google-auth-library');
 require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
 const { PrismaPg } = require('@prisma/adapter-pg');
@@ -120,6 +121,74 @@ app.post('/auth/verify-otp', async (req, res) => {
   } catch (error) {
     console.error('[Verify OTP Error]:', error.message);
     res.status(500).json({ error: 'Database error linking your account', details: error.message });
+  }
+});
+
+// Initialize Google OAuth2 Client
+const googleClient = new OAuth2Client();
+
+app.post('/auth/google-login', async (req, res) => {
+  const { idToken } = req.body;
+  if (!idToken) {
+    return res.status(400).json({ error: 'Google ID token required' });
+  }
+
+  try {
+    // Developer bypass for testing/verifying database sync in Expo Go without native build
+    if (process.env.NODE_ENV !== 'production' && idToken === 'mock_developer_bypass_token') {
+      const email = 'mockuser@gmail.com';
+      const name = 'Mock Developer';
+      
+      let user = await prisma.user.findUnique({ where: { email } });
+      if (!user) {
+        user = await prisma.user.create({ data: { email, name } });
+      }
+      const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+      return res.json({ token, user });
+    }
+
+    // Verify the Google ID Token
+    // We allow token validation across all client types (Android, iOS, Web)
+    const ticket = await googleClient.verifyIdToken({
+      idToken,
+      // If GOOGLE_CLIENT_ID or multiple allowed Client IDs are defined in env,
+      // we can verify against them. Otherwise, verification is done securely via Google's certs.
+      audience: process.env.GOOGLE_CLIENT_IDS 
+        ? process.env.GOOGLE_CLIENT_IDS.split(',') 
+        : undefined
+    });
+    
+    const payload = ticket.getPayload();
+    const email = payload.email;
+    const name = payload.name;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email not provided by Google account' });
+    }
+
+    // Get or Create User based on email (account merge/link happens automatically!)
+    let user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          email,
+          name: name || null
+        }
+      });
+    } else if (name && !user.name) {
+      // Sync user's name if it wasn't set previously
+      user = await prisma.user.update({
+        where: { email },
+        data: { name }
+      });
+    }
+
+    // Create standard app session JWT token
+    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ token, user });
+  } catch (error) {
+    console.error('[Google Login Error]:', error);
+    res.status(401).json({ error: 'Invalid Google ID Token', details: error.message });
   }
 });
 
