@@ -135,7 +135,7 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
       useStore.getState().checkDailyReset();
 
       const [todayRes, summaryRes] = await Promise.all([
-        apiCall('/stats/today'),
+        apiCall(`/stats/today?date=${getLocalDateString()}`),
         apiCall('/stats/summary')
       ]);
 
