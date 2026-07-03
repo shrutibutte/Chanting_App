@@ -28,7 +28,7 @@
       "favicon": "./assets/favicon.png"
     },
     "notification": {
-      "icon": "./assets/maharaj.jpg",
+      "icon": "./assets/app_logo.png",
       "color": "#FF6B35"
     },
     "plugins": [
