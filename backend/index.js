@@ -172,7 +172,7 @@ app.post('/sync-taps', authenticateToken, async (req, res) => {
 // Get Today's Stats
 app.get('/stats/today', authenticateToken, async (req, res) => {
   const userId = req.user.id;
-  const today = new Date().toISOString().split('T')[0];
+  const today = req.query.date || new Date().toISOString().split('T')[0];
 
   const result = await prisma.chantRecord.aggregate({
     _sum: { count: true },

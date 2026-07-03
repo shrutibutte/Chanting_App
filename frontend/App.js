@@ -14,6 +14,7 @@ import JourneyScreen from './src/screens/JourneyScreen';
 import { requestNotificationPermissions, scheduleDailyReminder, updateTargetReminder } from './src/utils/notifications';
 import { getLocalDateString } from './src/utils/date.js';
 import { getTranslation } from './src/utils/translations';
+import { getTheme } from './src/utils/themes';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -54,14 +55,15 @@ const confettiParticles = Array.from({ length: 40 }).map((_, i) => {
 });
 
 function BottomTabBar({ activeTab, onTabSelect }) {
-  const isDarkMode = useStore((state) => state.isDarkMode);
+  const themeId = useStore((state) => state.themeId);
+  const theme = getTheme(themeId);
   return (
-    <View style={[styles.tabContainer, isDarkMode && styles.darkTabContainer]}>
+    <View style={[styles.tabContainer, { backgroundColor: theme.card, borderTopColor: theme.border, borderTopWidth: 1 }]}>
       <TouchableOpacity style={styles.tabItem} onPress={() => onTabSelect('home')}>
         <Ionicons 
           name={activeTab === 'home' ? 'home' : 'home-outline'} 
           size={24} 
-          color={activeTab === 'home' ? (isDarkMode ? '#FFFFFF' : '#FF6B35') : (isDarkMode ? '#555555' : '#B0B0B0')} 
+          color={activeTab === 'home' ? theme.accent : theme.secondaryText} 
         />
       </TouchableOpacity>
 
@@ -69,7 +71,7 @@ function BottomTabBar({ activeTab, onTabSelect }) {
         <Ionicons 
           name={activeTab === 'chart' ? 'stats-chart' : 'stats-chart-outline'} 
           size={24} 
-          color={activeTab === 'chart' ? (isDarkMode ? '#FFFFFF' : '#FF6B35') : (isDarkMode ? '#555555' : '#B0B0B0')} 
+          color={activeTab === 'chart' ? theme.accent : theme.secondaryText} 
         />
       </TouchableOpacity>
 
@@ -77,7 +79,7 @@ function BottomTabBar({ activeTab, onTabSelect }) {
         <Ionicons 
           name={activeTab === 'journey' ? 'flower' : 'flower-outline'} 
           size={24} 
-          color={activeTab === 'journey' ? (isDarkMode ? '#FFFFFF' : '#FF6B35') : (isDarkMode ? '#555555' : '#B0B0B0')} 
+          color={activeTab === 'journey' ? theme.accent : theme.secondaryText} 
         />
       </TouchableOpacity>
 
@@ -85,7 +87,7 @@ function BottomTabBar({ activeTab, onTabSelect }) {
         <Ionicons 
           name={activeTab === 'settings' ? 'settings' : 'settings-outline'} 
           size={24} 
-          color={activeTab === 'settings' ? (isDarkMode ? '#FFFFFF' : '#FF6B35') : (isDarkMode ? '#555555' : '#B0B0B0')} 
+          color={activeTab === 'settings' ? theme.accent : theme.secondaryText} 
         />
       </TouchableOpacity>
     </View>
@@ -111,8 +113,12 @@ export default function App() {
     reminderTime,
     isDarkMode,
     language,
-    isBlackoutMode
+    isBlackoutMode,
+    themeId,
+    celebrationType
   } = useStore();
+
+  const theme = getTheme(themeId);
 
   // Toast state
   const [showToast, setShowToast] = useState(false);
@@ -223,12 +229,12 @@ export default function App() {
     wasCompletedRef.current = isCompleted;
   }, [userToken, isReminderEnabled, dailyGoal, todayCount >= dailyGoal]);
 
-  // One-time Toast Trigger on Mount
+  // One-time Toast Trigger on Mount or when count increases to 1 or more
   useEffect(() => {
     if (userToken) {
       const currentDate = getLocalDateString();
-      // Check if goal is already met today and the popup wasn't shown today
-      if (todayCount >= dailyGoal && lastStreakMaintainedPopupDate !== currentDate) {
+      // Check if they chanted at least once today and the popup wasn't shown today
+      if (todayCount >= 1 && lastStreakMaintainedPopupDate !== currentDate) {
         const timer = setTimeout(() => {
           setShowToast(true);
           setLastStreakMaintainedPopupDate(currentDate);
@@ -236,7 +242,7 @@ export default function App() {
         return () => clearTimeout(timer);
       }
     }
-  }, [userToken, todayCount, dailyGoal, lastStreakMaintainedPopupDate]);
+  }, [userToken, todayCount >= 1, lastStreakMaintainedPopupDate]);
 
   // Slide down / up Toast Animation
   useEffect(() => {
@@ -343,11 +349,51 @@ export default function App() {
     }
   }, [showCelebrationModal]);
 
+  const badgeRotateInterpolate = badgeRotate.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  const celebrationDetails = useMemo(() => {
+    switch (celebrationType) {
+      case 'weekly':
+        return {
+          emoji: '🌟',
+          title: language === 'hi' ? 'साप्ताहिक लक्ष्य पूरा!' : 'Weekly Target Met!',
+          msg: language === 'hi' 
+            ? 'बधाई हो! आपने अपना साप्ताहिक जाप लक्ष्य पूरा कर लिया है! आपकी भक्ति बढ़ती रहे।' 
+            : 'Congratulations! You have completed your weekly chanting goal! Keep up the amazing devotion!'
+        };
+      case 'monthly':
+        return {
+          emoji: '🏆',
+          title: language === 'hi' ? 'मासिक लक्ष्य पूरा!' : 'Monthly Target Met!',
+          msg: language === 'hi' 
+            ? 'अधुभूत! आपने अपना मासिक जाप लक्ष्य पूरा कर लिया है! आपका आध्यात्मिक मार्ग प्रशस्त हो।' 
+            : 'Wow! You have met your monthly chanting milestone! May you be blessed with constant devotion!'
+        };
+      case 'yearly':
+        return {
+          emoji: '👑',
+          title: language === 'hi' ? 'वार्षिक लक्ष्य पूरा!' : 'Yearly Target Met!',
+          msg: language === 'hi' 
+            ? 'असाधारण! आपने अपना वार्षिक जाप लक्ष्य पूरा कर लिया है! यह एक महान आध्यात्मिक उपलब्धि है।' 
+            : 'Spectacular! You have accomplished your yearly chanting goal! Absolute spiritual milestone!'
+        };
+      default:
+        return {
+          emoji: '🔥',
+          title: getTranslation(language, 'congratulations'),
+          msg: getTranslation(language, 'celebrationMsg')
+        };
+    }
+  }, [celebrationType, language]);
+
   // Very lean conditional rendering approach as requested
   if (!userToken) {
     return (
-      <View style={[styles.container, isDarkMode && styles.darkContainer]}>
-        <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <StatusBar barStyle={theme.id === 'darkTemple' ? "light-content" : "dark-content"} backgroundColor={theme.background} />
         <AuthScreen />
       </View>
     );
@@ -362,16 +408,11 @@ export default function App() {
     );
   }
 
-  const badgeRotateInterpolate = badgeRotate.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
-
   return (
-    <View style={[styles.container, isDarkMode && styles.darkContainer]}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <StatusBar 
-        barStyle={isDarkMode ? "light-content" : "dark-content"} 
-        backgroundColor={isDarkMode ? "#000000" : "#FFFDF9"} 
+        barStyle={theme.id === 'darkTemple' ? "light-content" : "dark-content"} 
+        backgroundColor={theme.background} 
       />
 
       {activeTab === 'home' && (
@@ -438,7 +479,7 @@ export default function App() {
                     width: p.size,
                     height: p.isCircle ? p.size : p.size * 1.5,
                     borderRadius: p.isCircle ? p.size / 2 : 2,
-                    backgroundColor: isDarkMode ? '#FFFFFF' : p.color,
+                    backgroundColor: theme.id === 'darkTemple' ? '#FFFFFF' : p.color,
                     transform: [{ translateY }, { translateX }, { rotate }],
                   },
                 ]}
@@ -448,7 +489,7 @@ export default function App() {
 
           {/* Celebration Card */}
           <SafeAreaView style={styles.celebrationContent}>
-            <View style={[styles.celebrationCard, isDarkMode && styles.darkCelebrationCard]}>
+            <View style={[styles.celebrationCard, { backgroundColor: theme.card }]}>
               
               {/* Badge & Glow Container */}
               <View style={{ width: 150, height: 150, alignItems: 'center', justifyContent: 'center', marginBottom: 28, position: 'relative' }}>
@@ -457,8 +498,9 @@ export default function App() {
                 <Animated.View 
                   style={[
                     styles.glowRing,
-                    isDarkMode && styles.darkGlowRing,
                     {
+                      backgroundColor: theme.accent,
+                      shadowColor: theme.accent,
                       transform: [
                         { scale: glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.95, 1.3] }) }
                       ],
@@ -470,20 +512,25 @@ export default function App() {
                 <Animated.View 
                   style={[
                     styles.badgeGlow,
-                    isDarkMode && styles.darkBadgeGlow,
-                    { transform: [{ scale: badgeScale }, { rotate: badgeRotateInterpolate }], marginBottom: 0 }
+                    {
+                      backgroundColor: theme.id === 'darkTemple' ? '#111111' : '#FFF2E6',
+                      borderColor: theme.id === 'darkTemple' ? '#333333' : '#FFDDC8',
+                      shadowColor: theme.accent,
+                      transform: [{ scale: badgeScale }, { rotate: badgeRotateInterpolate }],
+                      marginBottom: 0
+                    }
                   ]}
-                >
-                  <View style={[styles.badgeCircle, isDarkMode && styles.darkBadgeCircle]}>
-                    <Text style={styles.badgeEmoji}>🔥</Text>
-                    <View style={styles.streakBadgeTextContainer}>
-                      <Text style={styles.streakBadgeTextVal}>{currentStreak}</Text>
-                      <Text style={[styles.streakBadgeTextLabel, isDarkMode && styles.darkStreakBadgeTextLabel]}>
-                        {getTranslation(language, 'days').toUpperCase()}
-                      </Text>
-                    </View>
+                />
+                
+                <View style={[styles.badgeCircle, { backgroundColor: theme.accent, position: 'absolute', zIndex: 10 }]}>
+                  <Text style={styles.badgeEmoji}>{celebrationDetails.emoji}</Text>
+                  <View style={styles.streakBadgeTextContainer}>
+                    <Text style={styles.streakBadgeTextVal}>{currentStreak}</Text>
+                    <Text style={[styles.streakBadgeTextLabel, { color: '#FFFFFF' }]}>
+                      {getTranslation(language, 'days').toUpperCase()}
+                    </Text>
                   </View>
-                </Animated.View>
+                </View>
 
                 {/* Floating sparkling diamond stars */}
                 {SPARKLE_CONFIG.map((s, idx) => {
@@ -514,12 +561,13 @@ export default function App() {
                         opacity,
                         transform: [{ scale }, { rotate }],
                         pointerEvents: 'none',
+                        zIndex: 15,
                       }}
                     >
                       <Svg width={s.size} height={s.size} viewBox="0 0 24 24" fill="none">
                         <Path 
                           d="M12 0L15.5 8.5L24 12L15.5 15.5L12 24L8.5 15.5L0 12L8.5 8.5L12 0Z" 
-                          fill={isDarkMode ? "#FFFFFF" : "#FFD166"} 
+                          fill={theme.id === 'darkTemple' ? "#FFFFFF" : "#FFD166"} 
                         />
                       </Svg>
                     </Animated.View>
@@ -528,29 +576,29 @@ export default function App() {
 
               </View>
 
-              <Text style={[styles.celebrationTitle, isDarkMode && styles.darkCelebrationTitle]}>
-                {getTranslation(language, 'congratulations')}
+              <Text style={[styles.celebrationTitle, { color: theme.primaryText }]}>
+                {celebrationDetails.title}
               </Text>
               
-              <Text style={[styles.celebrationMessage, isDarkMode && styles.darkCelebrationMessage]}>
-                {getTranslation(language, 'celebrationMsg')}
+              <Text style={[styles.celebrationMessage, { color: theme.secondaryText }]}>
+                {celebrationDetails.msg}
               </Text>
 
-              <View style={[styles.streakHighlightBox, isDarkMode && styles.darkStreakHighlightBox]}>
-                <Text style={[styles.streakHighlightTitle, isDarkMode && styles.darkStreakHighlightTitle]}>
+              <View style={[styles.streakHighlightBox, { backgroundColor: theme.id === 'darkTemple' ? '#111111' : '#FFF2E6', borderColor: theme.id === 'darkTemple' ? '#222222' : '#FFE6D3' }]}>
+                <Text style={[styles.streakHighlightTitle, { color: theme.secondaryText }]}>
                   {getTranslation(language, 'currentStreakUpper')}
                 </Text>
-                <Text style={[styles.streakHighlightVal, isDarkMode && styles.darkStreakHighlightVal]}>
+                <Text style={[styles.streakHighlightVal, { color: theme.accent }]}>
                   {currentStreak} {getTranslation(language, 'days')}
                 </Text>
               </View>
 
               <TouchableOpacity 
-                style={[styles.continueButton, isDarkMode && styles.darkContinueButton]} 
+                style={[styles.continueButton, { backgroundColor: theme.accent, shadowColor: theme.accent }]} 
                 onPress={() => setShowCelebrationModal(false)}
                 activeOpacity={0.8}
               >
-                <Text style={[styles.continueButtonText, isDarkMode && styles.darkContinueButtonText]}>
+                <Text style={[styles.continueButtonText, { color: '#FFFFFF' }]}>
                   {getTranslation(language, 'continue')}
                 </Text>
               </TouchableOpacity>

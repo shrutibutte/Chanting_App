@@ -5,6 +5,7 @@ import * as Haptics from 'expo-haptics';
 import { useStore } from '../store/useStore';
 import { syncOfflineCounter } from '../api/client';
 import { getTranslation } from '../utils/translations';
+import { getTheme } from '../utils/themes';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -17,10 +18,11 @@ export default function CounterScreen({ initialTimerSeconds = 0, onExit }) {
     currentNaam, 
     sessionCount, 
     resetSession,
-    isDarkMode,
-    language
+    language,
+    themeId
   } = useStore();
 
+  const theme = getTheme(themeId);
   const [secondsLeft, setSecondsLeft] = useState(initialTimerSeconds);
 
   useEffect(() => {
@@ -81,7 +83,7 @@ export default function CounterScreen({ initialTimerSeconds = 0, onExit }) {
 
   return (
     <TouchableOpacity
-      style={[styles.container, isDarkMode && styles.darkContainer]}
+      style={[styles.container, { backgroundColor: theme.background }]}
       activeOpacity={0.95}
       onPress={handleTap}
     >
@@ -89,20 +91,20 @@ export default function CounterScreen({ initialTimerSeconds = 0, onExit }) {
         
         {/* Top Header Bar */}
         <View style={styles.topBar}>
-          <TouchableOpacity style={[styles.exitButton, isDarkMode && styles.darkExitButton]} onPress={handleExit}>
-            <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={isDarkMode ? "#FFFFFF" : "#FF6B35"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <TouchableOpacity style={[styles.exitButton, { borderColor: theme.accent, backgroundColor: theme.card }]} onPress={handleExit}>
+            <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={theme.accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <Path d="M9 14L4 9l5-5" />
               <Path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11" />
             </Svg>
           </TouchableOpacity>
           <View style={styles.topBarRight}>
             {initialTimerSeconds > 0 && (
-              <View style={[styles.timerBadge, isDarkMode && styles.darkBadge]}>
-                <Text style={[styles.timerBadgeText, isDarkMode && styles.darkBadgeText]}>⏱️ {formatTime(secondsLeft)}</Text>
+              <View style={[styles.timerBadge, { backgroundColor: theme.id === 'darkTemple' ? '#111111' : '#FFF0F0', borderColor: theme.id === 'darkTemple' ? '#333333' : '#FFD3D3' }]}>
+                <Text style={[styles.timerBadgeText, { color: theme.id === 'darkTemple' ? '#FFFFFF' : '#FF4D4D' }]}>⏱️ {formatTime(secondsLeft)}</Text>
               </View>
             )}
-            <View style={[styles.malaBadge, isDarkMode && styles.darkBadge]}>
-              <Text style={[styles.malaBadgeText, isDarkMode && styles.darkBadgeText]}>{getTranslation(language, 'malas')} {Math.floor(todayCount / 108)}</Text>
+            <View style={[styles.malaBadge, { backgroundColor: theme.id === 'darkTemple' ? '#111111' : '#FFF2E6', borderColor: theme.id === 'darkTemple' ? '#333333' : '#FFE6D3' }]}>
+              <Text style={[styles.malaBadgeText, { color: theme.accent }]}>{getTranslation(language, 'malas')} {Math.floor(todayCount / 108)}</Text>
             </View>
           </View>
         </View>
@@ -114,7 +116,7 @@ export default function CounterScreen({ initialTimerSeconds = 0, onExit }) {
               styles.chantingName, 
               { 
                 fontSize: (currentNaam?.name || 'Krishna').length > 20 ? 24 : 36,
-                color: isDarkMode ? '#FFFFFF' : '#FF6B35'
+                color: theme.accent
               }
             ]}
             numberOfLines={2}
@@ -126,10 +128,10 @@ export default function CounterScreen({ initialTimerSeconds = 0, onExit }) {
           <View style={styles.circleOuterContainer}>
             <Svg width={size} height={size}>
               {/* Background Circle */}
-              <Circle stroke={isDarkMode ? "#333333" : "#FFE6D3"} fill="none" cx={size / 2} cy={size / 2} r={radius} strokeWidth={strokeWidth} />
+              <Circle stroke={theme.id === 'darkTemple' ? "#2D2D2D" : theme.border} fill="none" cx={size / 2} cy={size / 2} r={radius} strokeWidth={strokeWidth} />
               {/* Active Progress Circle */}
               <Circle 
-                stroke={isDarkMode ? "#FFFFFF" : "#FF6B35"} 
+                stroke={theme.accent} 
                 fill="none" 
                 cx={size / 2} cy={size / 2} r={radius} strokeWidth={strokeWidth} 
                 strokeDasharray={`${circumference} ${circumference}`} 
@@ -141,36 +143,36 @@ export default function CounterScreen({ initialTimerSeconds = 0, onExit }) {
 
             {/* Inner Content inside Circle */}
             <View style={styles.circleInner}>
-              <Text style={[styles.countText, isDarkMode && styles.darkCountText]}>{currentMalaProgress}</Text>
-              <Text style={[styles.ofText, isDarkMode && styles.darkOfText]}>/ 108</Text>
+              <Text style={[styles.countText, { color: theme.primaryText }]}>{currentMalaProgress}</Text>
+              <Text style={[styles.ofText, { color: theme.secondaryText }]}>/ 108</Text>
             </View>
           </View>
           
-          <Text style={[styles.subtitle, isDarkMode && styles.darkSubtitle]}>{getTranslation(language, 'tapToCount')}</Text>
+          <Text style={[styles.subtitle, { color: theme.secondaryText }]}>{getTranslation(language, 'tapToCount')}</Text>
         </View>
 
         {/* Stats Panel */}
         <View style={styles.statsCardWrapper}>
-          <View style={[styles.statsCard, isDarkMode && styles.darkCardRow]}>
+          <View style={[styles.statsCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
             <View style={styles.statColumn}>
-              <Text style={[styles.statNumber, isDarkMode && styles.darkStatNumber]}>{Math.floor(todayCount / 108)}</Text>
-              <Text style={[styles.statLabel, isDarkMode && styles.darkStatLabel]}>{getTranslation(language, 'malas')}</Text>
+              <Text style={[styles.statNumber, { color: theme.accent }]}>{Math.floor(todayCount / 108)}</Text>
+              <Text style={[styles.statLabel, { color: theme.secondaryText }]}>{getTranslation(language, 'malas')}</Text>
             </View>
 
-            <View style={[styles.verticalDivider, isDarkMode && { backgroundColor: '#333333' }]} />
+            <View style={[styles.verticalDivider, { backgroundColor: theme.border }]} />
 
             <View style={styles.statColumn}>
-              <Text style={[styles.statNumber, isDarkMode && styles.darkStatNumber]}>
+              <Text style={[styles.statNumber, { color: theme.accent }]}>
                 {todayCount}
               </Text>
-              <Text style={[styles.statLabel, isDarkMode && styles.darkStatLabel]}>{getTranslation(language, 'today')}</Text>
+              <Text style={[styles.statLabel, { color: theme.secondaryText }]}>{getTranslation(language, 'today')}</Text>
             </View>
 
-            <View style={[styles.verticalDivider, isDarkMode && { backgroundColor: '#333333' }]} />
+            <View style={[styles.verticalDivider, { backgroundColor: theme.border }]} />
 
             <View style={styles.statColumn}>
-              <Text style={[styles.statNumber, isDarkMode && styles.darkStatNumber]}>{totalCount}</Text>
-              <Text style={[styles.statLabel, isDarkMode && styles.darkStatLabel]}>{getTranslation(language, 'total')}</Text>
+              <Text style={[styles.statNumber, { color: theme.accent }]}>{totalCount}</Text>
+              <Text style={[styles.statLabel, { color: theme.secondaryText }]}>{getTranslation(language, 'total')}</Text>
             </View>
           </View>
         </View>

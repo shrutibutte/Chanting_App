@@ -4,14 +4,17 @@ import { useStore } from '../store/useStore';
 import { apiCall } from '../api/client';
 import { getTranslation } from '../utils/translations';
 
+import { getTheme } from '../utils/themes';
+
 export default function AuthScreen() {
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [isOtpSent, setIsOtpSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const setLogin = useStore((state) => state.login);
-  const isDarkMode = useStore((state) => state.isDarkMode);
   const language = useStore((state) => state.language);
+  const themeId = useStore((state) => state.themeId);
+  const theme = getTheme(themeId);
 
   const handleSendOtp = async () => {
     if (!email.includes('@')) return Alert.alert(getTranslation(language, 'invalidEmail'), getTranslation(language, 'enterValidEmail'));
@@ -41,21 +44,21 @@ export default function AuthScreen() {
   };
 
   return (
-    <View style={[styles.container, isDarkMode && styles.darkContainer]}>
-      <Text style={[styles.title, isDarkMode && styles.darkTitle]}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <Text style={[styles.title, { color: theme.accent }]}>
         {getTranslation(language, 'appName')}
       </Text>
-      <Text style={[styles.subtitle, isDarkMode && styles.darkSubtitle]}>
+      <Text style={[styles.subtitle, { color: theme.secondaryText }]}>
         {getTranslation(language, 'beginJourney')}
       </Text>
 
-      <Text style={[styles.label, isDarkMode && styles.darkLabel]}>
+      <Text style={[styles.label, { color: theme.secondaryText }]}>
         {getTranslation(language, 'emailAddress')}
       </Text>
       <TextInput
-        style={[styles.input, isDarkMode && styles.darkInput]}
+        style={[styles.input, { backgroundColor: theme.card, borderColor: theme.border, color: theme.primaryText }]}
         placeholder={getTranslation(language, 'enterEmail')}
-        placeholderTextColor={isDarkMode ? "#666666" : "#8E8E8E"}
+        placeholderTextColor={theme.secondaryText}
         keyboardType="email-address"
         autoCapitalize="none"
         value={email}
@@ -65,13 +68,13 @@ export default function AuthScreen() {
 
       {isOtpSent && (
         <>
-          <Text style={[styles.label, isDarkMode && styles.darkLabel]}>
+          <Text style={[styles.label, { color: theme.secondaryText }]}>
             {getTranslation(language, 'otp')}
           </Text>
           <TextInput
-            style={[styles.input, isDarkMode && styles.darkInput]}
+            style={[styles.input, { backgroundColor: theme.card, borderColor: theme.border, color: theme.primaryText }]}
             placeholder={getTranslation(language, 'enterOtp')}
-            placeholderTextColor={isDarkMode ? "#666666" : "#8E8E8E"}
+            placeholderTextColor={theme.secondaryText}
             keyboardType="number-pad"
             value={otp}
             onChangeText={setOtp}
@@ -81,14 +84,14 @@ export default function AuthScreen() {
       )}
 
       <TouchableOpacity 
-        style={[styles.button, isDarkMode && styles.darkButton]} 
+        style={[styles.button, { backgroundColor: theme.accent }]} 
         onPress={isOtpSent ? handleVerifyOtp : handleSendOtp}
         disabled={loading}
       >
         {loading ? (
-          <ActivityIndicator color={isDarkMode ? "#000000" : "#FFFFFF"} />
+          <ActivityIndicator color="#FFFFFF" />
         ) : (
-          <Text style={[styles.buttonText, isDarkMode && styles.darkButtonText]}>
+          <Text style={styles.buttonText}>
             {isOtpSent ? getTranslation(language, 'verifyLogin') : getTranslation(language, 'sendOtp')}
           </Text>
         )}
