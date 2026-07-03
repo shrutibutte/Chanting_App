@@ -311,35 +311,35 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
       <View style={styles.statsCardWrapper}>
         <View style={[styles.statsCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
           <View style={styles.statColumn}>
-            <Text style={[styles.statNumber, { color: theme.accent }]}>{displayTotalMalas}</Text>
+            <Text style={[styles.statNumber, { color: theme.accent, fontSize: String(displayTotalMalas).length >= 8 ? 14 : String(displayTotalMalas).length >= 6 ? 18 : 24 }]} numberOfLines={1} adjustsFontSizeToFit={true}>{displayTotalMalas}</Text>
             <Text style={[styles.statLabel, { color: theme.secondaryText }]}>{getTranslation(language, 'malas')}</Text>
           </View>
-
+ 
           <View style={[styles.verticalDivider, { backgroundColor: theme.border }]} />
-
+ 
           <View style={styles.statColumn}>
             {todayCount >= goals.daily ? (
               <>
-                <Text style={[styles.statNumber, { color: theme.success }]}>
+                <Text style={[styles.statNumber, { color: theme.success, fontSize: String(todayCount).length >= 8 ? 14 : String(todayCount).length >= 6 ? 18 : 24 }]} numberOfLines={1} adjustsFontSizeToFit={true}>
                   {todayCount}
                 </Text>
                 <Text style={[styles.statLabel, { color: theme.success, fontWeight: 'bold' }]}>✅ {getTranslation(language, 'goalMet')}</Text>
               </>
             ) : (
               <>
-                <Text style={[styles.statNumber, { color: theme.accent }]}>
+                <Text style={[styles.statNumber, { color: theme.accent, fontSize: String(todayCount).length >= 8 ? 14 : String(todayCount).length >= 6 ? 18 : 24 }]} numberOfLines={1} adjustsFontSizeToFit={true}>
                   {todayCount}
-                  <Text style={{ fontSize: 14, color: theme.secondaryText }}>{` / ${goals.daily || 108}`}</Text>
+                  <Text style={{ fontSize: String(todayCount).length >= 8 ? 10 : 14, color: theme.secondaryText }}>{` / ${goals.daily || 108}`}</Text>
                 </Text>
                 <Text style={[styles.statLabel, { color: theme.secondaryText }]}>{getTranslation(language, 'todayGoal')}</Text>
               </>
             )}
           </View>
-
+ 
           <View style={[styles.verticalDivider, { backgroundColor: theme.border }]} />
-
+ 
           <View style={styles.statColumn}>
-            <Text style={[styles.statNumber, { color: theme.accent }]}>{totalCount}</Text>
+            <Text style={[styles.statNumber, { color: theme.accent, fontSize: String(totalCount).length >= 8 ? 14 : String(totalCount).length >= 6 ? 18 : 24 }]} numberOfLines={1} adjustsFontSizeToFit={true}>{totalCount}</Text>
             <Text style={[styles.statLabel, { color: theme.secondaryText }]}>{getTranslation(language, 'totalCount')}</Text>
           </View>
         </View>
@@ -352,63 +352,69 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
         transparent={true}
         onRequestClose={() => setIsModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, isDarkMode && styles.darkModalContent, { height: '80%', paddingBottom: 80 }]}>
-            <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => setIsModalVisible(false)} style={{ padding: 4 }}>
-                <Ionicons name="chevron-back" size={24} color={isDarkMode ? "#FFFFFF" : "#FF6B35"} />
-              </TouchableOpacity>
-              <Text style={[styles.modalTitle, isDarkMode && styles.darkModalTitle]}>{getTranslation(language, 'selectMantra')}</Text>
-              <TouchableOpacity onPress={() => setIsAddCustomModalVisible(true)} style={{ padding: 4 }}>
-                <Ionicons name="add" size={28} color={isDarkMode ? "#FFFFFF" : "#FF6B35"} />
-              </TouchableOpacity>
-            </View>
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setIsModalVisible(false)}
+        >
+          <TouchableWithoutFeedback>
+            <View style={[styles.modalContent, isDarkMode && styles.darkModalContent, { height: '80%', paddingBottom: 80 }]}>
+              <View style={styles.modalHeader}>
+                <TouchableOpacity onPress={() => setIsModalVisible(false)} style={{ padding: 4 }}>
+                  <Ionicons name="chevron-back" size={24} color={isDarkMode ? "#FFFFFF" : "#FF6B35"} />
+                </TouchableOpacity>
+                <Text style={[styles.modalTitle, isDarkMode && styles.darkModalTitle]}>{getTranslation(language, 'selectMantra')}</Text>
+                <TouchableOpacity onPress={() => setIsAddCustomModalVisible(true)} style={{ padding: 4 }}>
+                  <Ionicons name="add" size={28} color={isDarkMode ? "#FFFFFF" : "#FF6B35"} />
+                </TouchableOpacity>
+              </View>
 
-            <SectionList
-              sections={[
-                {
-                  title: getTranslation(language, 'custom'),
-                  data: customNaams || [],
-                },
-                {
-                  title: getTranslation(language, 'sanatan'),
-                  data: GODS_LIST,
-                }
-              ]}
-              keyExtractor={(item, index) => item.id || item.name + index}
-              renderItem={renderGodItem}
-              renderSectionHeader={({ section: { title, data } }) => {
-                if (title === getTranslation(language, 'custom') && data.length === 0) {
+              <SectionList
+                sections={[
+                  {
+                    title: getTranslation(language, 'custom'),
+                    data: customNaams || [],
+                  },
+                  {
+                    title: getTranslation(language, 'sanatan'),
+                    data: GODS_LIST,
+                  }
+                ]}
+                keyExtractor={(item, index) => item.id || item.name + index}
+                renderItem={renderGodItem}
+                renderSectionHeader={({ section: { title, data } }) => {
+                  if (title === getTranslation(language, 'custom') && data.length === 0) {
+                    return (
+                      <View style={styles.sectionHeaderContainer}>
+                        <Text style={[styles.sectionHeaderText, isDarkMode && styles.darkSectionHeaderText]}>{title}</Text>
+                        <Text style={[styles.noCustomText, isDarkMode && styles.darkNoCustomText]}>No custom names yet. Tap + to add.</Text>
+                      </View>
+                    );
+                  }
                   return (
                     <View style={styles.sectionHeaderContainer}>
                       <Text style={[styles.sectionHeaderText, isDarkMode && styles.darkSectionHeaderText]}>{title}</Text>
-                      <Text style={[styles.noCustomText, isDarkMode && styles.darkNoCustomText]}>No custom names yet. Tap + to add.</Text>
                     </View>
                   );
-                }
-                return (
-                  <View style={styles.sectionHeaderContainer}>
-                    <Text style={[styles.sectionHeaderText, isDarkMode && styles.darkSectionHeaderText]}>{title}</Text>
-                  </View>
-                );
-              }}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingBottom: 20 }}
-            />
+                }}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 20 }}
+              />
 
-            {/* Cycle Language Floating Button inside modal */}
-            <TouchableOpacity
-              style={[styles.langCycleFloatingButton, isDarkMode && styles.darkLangCycleFloatingButton]}
-              onPress={() => {
-                const languages = ['en', 'hi', 'mr'];
-                const nextIdx = (languages.indexOf(language) + 1) % languages.length;
-                useStore.getState().setLanguage(languages[nextIdx]);
-              }}
-            >
-              <Text style={[styles.langCycleFloatingText, isDarkMode && styles.darkLangCycleFloatingText]}>अ</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+              {/* Cycle Language Floating Button inside modal */}
+              <TouchableOpacity
+                style={[styles.langCycleFloatingButton, isDarkMode && styles.darkLangCycleFloatingButton]}
+                onPress={() => {
+                  const languages = ['en', 'hi', 'mr'];
+                  const nextIdx = (languages.indexOf(language) + 1) % languages.length;
+                  useStore.getState().setLanguage(languages[nextIdx]);
+                }}
+              >
+                <Text style={[styles.langCycleFloatingText, isDarkMode && styles.darkLangCycleFloatingText]}>अ</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableWithoutFeedback>
+        </TouchableOpacity>
       </Modal>
 
       {/* Menu Modal */}
@@ -580,99 +586,105 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
         transparent={true}
         onRequestClose={() => setIsLogMalaModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, isDarkMode && styles.darkModalContent, { height: '55%' }]}>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, isDarkMode && styles.darkModalTitle]}>{getTranslation(language, 'addLogCount')}</Text>
-              <TouchableOpacity onPress={() => setIsLogMalaModalVisible(false)}>
-                <Text style={[styles.closeModalText, isDarkMode && styles.darkCloseModalText]}>✕</Text>
-              </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setIsLogMalaModalVisible(false)}
+        >
+          <TouchableWithoutFeedback>
+            <View style={[styles.modalContent, isDarkMode && styles.darkModalContent, { height: '55%' }]}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, isDarkMode && styles.darkModalTitle]}>{getTranslation(language, 'addLogCount')}</Text>
+                <TouchableOpacity onPress={() => setIsLogMalaModalVisible(false)}>
+                  <Text style={[styles.closeModalText, isDarkMode && styles.darkCloseModalText]}>✕</Text>
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+                <View style={styles.quickMalaContainer}>
+                  <TouchableOpacity
+                    style={[styles.quickMalaBtn, isDarkMode && styles.darkQuickMalaBtn]}
+                    onPress={() => {
+                      addManualCount(108);
+                      setIsLogMalaModalVisible(false);
+                      setTimeout(() => syncOfflineCounter(), 500);
+                    }}
+                  >
+                    <Text style={[styles.quickMalaBtnText, isDarkMode && styles.darkQuickMalaBtnText]}>+1 {getTranslation(language, 'malas')}</Text>
+                    <Text style={[styles.quickMalaBtnSub, isDarkMode && styles.darkQuickMalaBtnSub]}>108 {getTranslation(language, 'counts')}</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.quickMalaBtn, isDarkMode && styles.darkQuickMalaBtn]}
+                    onPress={() => {
+                      addManualCount(216);
+                      setIsLogMalaModalVisible(false);
+                      setTimeout(() => syncOfflineCounter(), 500);
+                    }}
+                  >
+                    <Text style={[styles.quickMalaBtnText, isDarkMode && styles.darkQuickMalaBtnText]}>+2 {getTranslation(language, 'malas')}</Text>
+                    <Text style={[styles.quickMalaBtnSub, isDarkMode && styles.darkQuickMalaBtnSub]}>216 {getTranslation(language, 'counts')}</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.quickMalaContainer}>
+                  <TouchableOpacity
+                    style={[styles.quickMalaBtn, isDarkMode && styles.darkQuickMalaBtn]}
+                    onPress={() => {
+                      addManualCount(432);
+                      setIsLogMalaModalVisible(false);
+                      setTimeout(() => syncOfflineCounter(), 500);
+                    }}
+                  >
+                    <Text style={[styles.quickMalaBtnText, isDarkMode && styles.darkQuickMalaBtnText]}>+4 {getTranslation(language, 'malas')}</Text>
+                    <Text style={[styles.quickMalaBtnSub, isDarkMode && styles.darkQuickMalaBtnSub]}>432 {getTranslation(language, 'counts')}</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.quickMalaBtn, isDarkMode && styles.darkQuickMalaBtn]}
+                    onPress={() => {
+                      addManualCount(864);
+                      setIsLogMalaModalVisible(false);
+                      setTimeout(() => syncOfflineCounter(), 500);
+                    }}
+                  >
+                    <Text style={[styles.quickMalaBtnText, isDarkMode && styles.darkQuickMalaBtnText]}>+8 {getTranslation(language, 'malas')}</Text>
+                    <Text style={[styles.quickMalaBtnSub, isDarkMode && styles.darkQuickMalaBtnSub]}>864 {getTranslation(language, 'counts')}</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.customCountContainer}>
+                  <Text style={[styles.customCountLabel, isDarkMode && styles.darkCustomCountLabel]}>{getTranslation(language, 'orEnterCustomCounts')}</Text>
+                  <TextInput
+                    style={[styles.customCountInput, isDarkMode && styles.darkCustomCountInput]}
+                    value={customCountInput}
+                    onChangeText={setCustomCountInput}
+                    keyboardType="numeric"
+                    placeholder="e.g. 50 or 108"
+                    placeholderTextColor={isDarkMode ? "#666" : "#A0A0A0"}
+                  />
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.submitCountBtn, isDarkMode && styles.darkSubmitCountBtn]}
+                  onPress={() => {
+                    const count = parseInt(customCountInput, 10);
+                    if (!isNaN(count) && count > 0) {
+                      addManualCount(count);
+                      setCustomCountInput('');
+                      setIsLogMalaModalVisible(false);
+                      setTimeout(() => syncOfflineCounter(), 500);
+                    } else {
+                      Alert.alert(getTranslation(language, 'invalidCount'), getTranslation(language, 'enterValidCountMsg'));
+                    }
+                  }}
+                >
+                  <Text style={[styles.submitCountBtnText, isDarkMode && styles.darkSubmitCountBtnText]}>{getTranslation(language, 'addCount')}</Text>
+                </TouchableOpacity>
+              </ScrollView>
             </View>
-
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
-              <View style={styles.quickMalaContainer}>
-                <TouchableOpacity
-                  style={[styles.quickMalaBtn, isDarkMode && styles.darkQuickMalaBtn]}
-                  onPress={() => {
-                    addManualCount(108);
-                    setIsLogMalaModalVisible(false);
-                    setTimeout(() => syncOfflineCounter(), 500);
-                  }}
-                >
-                  <Text style={[styles.quickMalaBtnText, isDarkMode && styles.darkQuickMalaBtnText]}>+1 {getTranslation(language, 'malas')}</Text>
-                  <Text style={[styles.quickMalaBtnSub, isDarkMode && styles.darkQuickMalaBtnSub]}>108 {getTranslation(language, 'counts')}</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.quickMalaBtn, isDarkMode && styles.darkQuickMalaBtn]}
-                  onPress={() => {
-                    addManualCount(216);
-                    setIsLogMalaModalVisible(false);
-                    setTimeout(() => syncOfflineCounter(), 500);
-                  }}
-                >
-                  <Text style={[styles.quickMalaBtnText, isDarkMode && styles.darkQuickMalaBtnText]}>+2 {getTranslation(language, 'malas')}</Text>
-                  <Text style={[styles.quickMalaBtnSub, isDarkMode && styles.darkQuickMalaBtnSub]}>216 {getTranslation(language, 'counts')}</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.quickMalaContainer}>
-                <TouchableOpacity
-                  style={[styles.quickMalaBtn, isDarkMode && styles.darkQuickMalaBtn]}
-                  onPress={() => {
-                    addManualCount(432);
-                    setIsLogMalaModalVisible(false);
-                    setTimeout(() => syncOfflineCounter(), 500);
-                  }}
-                >
-                  <Text style={[styles.quickMalaBtnText, isDarkMode && styles.darkQuickMalaBtnText]}>+4 {getTranslation(language, 'malas')}</Text>
-                  <Text style={[styles.quickMalaBtnSub, isDarkMode && styles.darkQuickMalaBtnSub]}>432 {getTranslation(language, 'counts')}</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.quickMalaBtn, isDarkMode && styles.darkQuickMalaBtn]}
-                  onPress={() => {
-                    addManualCount(864);
-                    setIsLogMalaModalVisible(false);
-                    setTimeout(() => syncOfflineCounter(), 500);
-                  }}
-                >
-                  <Text style={[styles.quickMalaBtnText, isDarkMode && styles.darkQuickMalaBtnText]}>+8 {getTranslation(language, 'malas')}</Text>
-                  <Text style={[styles.quickMalaBtnSub, isDarkMode && styles.darkQuickMalaBtnSub]}>864 {getTranslation(language, 'counts')}</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.customCountContainer}>
-                <Text style={[styles.customCountLabel, isDarkMode && styles.darkCustomCountLabel]}>{getTranslation(language, 'orEnterCustomCounts')}</Text>
-                <TextInput
-                  style={[styles.customCountInput, isDarkMode && styles.darkCustomCountInput]}
-                  value={customCountInput}
-                  onChangeText={setCustomCountInput}
-                  keyboardType="numeric"
-                  placeholder="e.g. 50 or 108"
-                  placeholderTextColor={isDarkMode ? "#666" : "#A0A0A0"}
-                />
-              </View>
-
-              <TouchableOpacity
-                style={[styles.submitCountBtn, isDarkMode && styles.darkSubmitCountBtn]}
-                onPress={() => {
-                  const count = parseInt(customCountInput, 10);
-                  if (!isNaN(count) && count > 0) {
-                    addManualCount(count);
-                    setCustomCountInput('');
-                    setIsLogMalaModalVisible(false);
-                    setTimeout(() => syncOfflineCounter(), 500);
-                  } else {
-                    Alert.alert(getTranslation(language, 'invalidCount'), getTranslation(language, 'enterValidCountMsg'));
-                  }
-                }}
-              >
-                <Text style={[styles.submitCountBtnText, isDarkMode && styles.darkSubmitCountBtnText]}>{getTranslation(language, 'addCount')}</Text>
-              </TouchableOpacity>
-            </ScrollView>
-          </View>
-        </View>
+          </TouchableWithoutFeedback>
+        </TouchableOpacity>
       </Modal>
 
       {/* Level-Up Celebration Modal */}
@@ -682,45 +694,51 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
         animationType="fade"
         onRequestClose={() => setShowLevelModal(false)}
       >
-        <View style={styles.levelOverlay}>
-          <View style={[styles.levelCard, isDarkMode && styles.darkLevelCard]}>
-            <Text style={[styles.levelTitleText, isDarkMode && styles.darkLevelTitleText]}>{getTranslation(language, 'levelUnlockedTitle')}</Text>
+        <TouchableOpacity 
+          style={styles.levelOverlay} 
+          activeOpacity={1} 
+          onPress={() => setShowLevelModal(false)}
+        >
+          <TouchableWithoutFeedback>
+            <View style={[styles.levelCard, isDarkMode && styles.darkLevelCard]}>
+              <Text style={[styles.levelTitleText, isDarkMode && styles.darkLevelTitleText]}>{getTranslation(language, 'levelUnlockedTitle')}</Text>
 
-            <View style={styles.levelCelebrationIconContainer}>
-              <Text style={styles.levelCelebrationIcon}>{unlockedLevelInfo?.icon || '🌱'}</Text>
-            </View>
+              <View style={styles.levelCelebrationIconContainer}>
+                <Text style={styles.levelCelebrationIcon}>{unlockedLevelInfo?.icon || '🌱'}</Text>
+              </View>
 
-            <Text style={[styles.levelCongratulationText, isDarkMode && styles.darkLevelCongratulationText]}>
-              {getTranslation(language, 'levelCongratulationText')}
-            </Text>
-
-            <View style={[styles.levelHighlightBox, isDarkMode && styles.darkLevelHighlightBox]}>
-              <Text style={[styles.levelHighlightTitle, isDarkMode && styles.darkLevelHighlightTitle]}>{getTranslation(language, 'newLevelLabel')}</Text>
-              <Text style={[styles.levelHighlightVal, isDarkMode && styles.darkLevelHighlightVal]}>
-                {unlockedLevelInfo?.name ? (() => {
-                  const name = unlockedLevelInfo.name;
-                  const match = name.match(/^(Ananda Master|Koti Master)\s+Lvl\s+(\d+)$/);
-                  if (match) {
-                    const key = match[1] === 'Koti Master' ? 'level_KotiMaster' : 'level_AnandaMaster';
-                    return `${getTranslation(language, key)} Lvl ${match[2]}`;
-                  }
-                  return getTranslation(language, `level_${name.replace(/\s+/g, '')}`);
-                })() : ''}
+              <Text style={[styles.levelCongratulationText, isDarkMode && styles.darkLevelCongratulationText]}>
+                {getTranslation(language, 'levelCongratulationText')}
               </Text>
-              <Text style={[styles.levelHighlightSub, isDarkMode && styles.darkLevelHighlightSub]}>
-                {getTranslation(language, 'unlockedAtLabel', { target: unlockedLevelInfo?.target.toLocaleString() })}
-              </Text>
-            </View>
 
-            <TouchableOpacity
-              style={[styles.continueJourneyButton, isDarkMode && styles.darkContinueJourneyButton]}
-              onPress={() => setShowLevelModal(false)}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.continueJourneyButtonText, isDarkMode && styles.darkContinueJourneyButtonText]}>{getTranslation(language, 'continueJourney')}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+              <View style={[styles.levelHighlightBox, isDarkMode && styles.darkLevelHighlightBox]}>
+                <Text style={[styles.levelHighlightTitle, isDarkMode && styles.darkLevelHighlightTitle]}>{getTranslation(language, 'newLevelLabel')}</Text>
+                <Text style={[styles.levelHighlightVal, isDarkMode && styles.darkLevelHighlightVal]}>
+                  {unlockedLevelInfo?.name ? (() => {
+                    const name = unlockedLevelInfo.name;
+                    const match = name.match(/^(Ananda Master|Koti Master)\s+Lvl\s+(\d+)$/);
+                    if (match) {
+                      const key = match[1] === 'Koti Master' ? 'level_KotiMaster' : 'level_AnandaMaster';
+                      return `${getTranslation(language, key)} Lvl ${match[2]}`;
+                    }
+                    return getTranslation(language, `level_${name.replace(/\s+/g, '')}`);
+                  })() : ''}
+                </Text>
+                <Text style={[styles.levelHighlightSub, isDarkMode && styles.darkLevelHighlightSub]}>
+                  {getTranslation(language, 'unlockedAtLabel', { target: unlockedLevelInfo?.target.toLocaleString() })}
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.continueJourneyButton, isDarkMode && styles.darkContinueJourneyButton]}
+                onPress={() => setShowLevelModal(false)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.continueJourneyButtonText, isDarkMode && styles.darkContinueJourneyButtonText]}>{getTranslation(language, 'continueJourney')}</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableWithoutFeedback>
+        </TouchableOpacity>
       </Modal>
 
       {/* Timer Selection Modal */}
@@ -730,88 +748,94 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
         transparent={true}
         onRequestClose={() => setIsTimerModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, isDarkMode && styles.darkModalContent, { height: '45%' }]}>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, isDarkMode && styles.darkModalTitle]}>{getTranslation(language, 'setChantingTimer')}</Text>
-              <TouchableOpacity onPress={() => setIsTimerModalVisible(false)}>
-                <Text style={[styles.closeModalText, isDarkMode && styles.darkCloseModalText]}>✕</Text>
-              </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setIsTimerModalVisible(false)}
+        >
+          <TouchableWithoutFeedback>
+            <View style={[styles.modalContent, isDarkMode && styles.darkModalContent, { height: '45%' }]}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, isDarkMode && styles.darkModalTitle]}>{getTranslation(language, 'setChantingTimer')}</Text>
+                <TouchableOpacity onPress={() => setIsTimerModalVisible(false)}>
+                  <Text style={[styles.closeModalText, isDarkMode && styles.darkCloseModalText]}>✕</Text>
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+                <TouchableOpacity
+                  style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]}
+                  onPress={() => {
+                    setIsTimerModalVisible(false);
+                    onStartChanting(0); // 0 means no timer
+                  }}
+                >
+                  <Text style={[styles.menuOptionTitle, { color: isDarkMode ? '#FFFFFF' : '#FF6B35' }]}>{getTranslation(language, 'noTimerOption')}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]}
+                  onPress={() => {
+                    setIsTimerModalVisible(false);
+                    onStartChanting(60); // 1 minute
+                  }}
+                >
+                  <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{getTranslation(language, 'oneMinute')}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]}
+                  onPress={() => {
+                    setIsTimerModalVisible(false);
+                    onStartChanting(300); // 5 minutes
+                  }}
+                >
+                  <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{getTranslation(language, 'fiveMinutes')}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]}
+                  onPress={() => {
+                    setIsTimerModalVisible(false);
+                    onStartChanting(600); // 10 minutes
+                  }}
+                >
+                  <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{getTranslation(language, 'tenMinutes')}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]}
+                  onPress={() => {
+                    setIsTimerModalVisible(false);
+                    onStartChanting(900); // 15 minutes
+                  }}
+                >
+                  <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{getTranslation(language, 'fifteenMinutes')}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]}
+                  onPress={() => {
+                    setIsTimerModalVisible(false);
+                    onStartChanting(1200); // 20 minutes
+                  }}
+                >
+                  <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{getTranslation(language, 'twentyMinutes')}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]}
+                  onPress={() => {
+                    setIsTimerModalVisible(false);
+                    onStartChanting(1800); // 30 minutes
+                  }}
+                >
+                  <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{getTranslation(language, 'thirtyMinutes')}</Text>
+                </TouchableOpacity>
+              </ScrollView>
             </View>
-
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
-              <TouchableOpacity
-                style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]}
-                onPress={() => {
-                  setIsTimerModalVisible(false);
-                  onStartChanting(0); // 0 means no timer
-                }}
-              >
-                <Text style={[styles.menuOptionTitle, { color: isDarkMode ? '#FFFFFF' : '#FF6B35' }]}>{getTranslation(language, 'noTimerOption')}</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]}
-                onPress={() => {
-                  setIsTimerModalVisible(false);
-                  onStartChanting(60); // 1 minute
-                }}
-              >
-                <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{getTranslation(language, 'oneMinute')}</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]}
-                onPress={() => {
-                  setIsTimerModalVisible(false);
-                  onStartChanting(300); // 5 minutes
-                }}
-              >
-                <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{getTranslation(language, 'fiveMinutes')}</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]}
-                onPress={() => {
-                  setIsTimerModalVisible(false);
-                  onStartChanting(600); // 10 minutes
-                }}
-              >
-                <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{getTranslation(language, 'tenMinutes')}</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]}
-                onPress={() => {
-                  setIsTimerModalVisible(false);
-                  onStartChanting(900); // 15 minutes
-                }}
-              >
-                <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{getTranslation(language, 'fifteenMinutes')}</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]}
-                onPress={() => {
-                  setIsTimerModalVisible(false);
-                  onStartChanting(1200); // 20 minutes
-                }}
-              >
-                <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{getTranslation(language, 'twentyMinutes')}</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.menuOptionItem, isDarkMode && styles.darkMenuOptionItem]}
-                onPress={() => {
-                  setIsTimerModalVisible(false);
-                  onStartChanting(1800); // 30 minutes
-                }}
-              >
-                <Text style={[styles.menuOptionTitle, isDarkMode && styles.darkMenuOptionTitle]}>{getTranslation(language, 'thirtyMinutes')}</Text>
-              </TouchableOpacity>
-            </ScrollView>
-          </View>
-        </View>
+          </TouchableWithoutFeedback>
+        </TouchableOpacity>
       </Modal>
 
       {/* Add Custom Naam Modal */}
@@ -821,84 +845,90 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
         animationType="fade"
         onRequestClose={() => setIsAddCustomModalVisible(false)}
       >
-        <View style={styles.centerModalOverlay}>
-          <View style={[styles.customModalContent, isDarkMode && styles.darkCustomModalContent]}>
-            <Text style={[styles.customModalTitle, isDarkMode && styles.darkCustomModalTitle]}>
-              {getTranslation(language, 'addCustomMantra')}
-            </Text>
+        <TouchableOpacity 
+          style={styles.centerModalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setIsAddCustomModalVisible(false)}
+        >
+          <TouchableWithoutFeedback>
+            <View style={[styles.customModalContent, isDarkMode && styles.darkCustomModalContent]}>
+              <Text style={[styles.customModalTitle, isDarkMode && styles.darkCustomModalTitle]}>
+                {getTranslation(language, 'addCustomMantra')}
+              </Text>
 
-            <Text style={[styles.customModalSubtitle, isDarkMode && styles.darkCustomModalSubtitle]}>
-              {getTranslation(language, 'addCustomSubtitle')}
-            </Text>
+              <Text style={[styles.customModalSubtitle, isDarkMode && styles.darkCustomModalSubtitle]}>
+                {getTranslation(language, 'addCustomSubtitle')}
+              </Text>
 
-            <TextInput
-              style={[styles.customModalInput, isDarkMode && styles.darkCustomModalInput]}
-              value={customNaamInput}
-              onChangeText={setCustomNaamInput}
-              placeholder={getTranslation(language, 'mantraPlaceholder')}
-              placeholderTextColor={isDarkMode ? "#666" : "#A89E94"}
-              maxLength={100}
-              autoFocus
-            />
+              <TextInput
+                style={[styles.customModalInput, isDarkMode && styles.darkCustomModalInput]}
+                value={customNaamInput}
+                onChangeText={setCustomNaamInput}
+                placeholder={getTranslation(language, 'mantraPlaceholder')}
+                placeholderTextColor={isDarkMode ? "#666" : "#A89E94"}
+                maxLength={100}
+                autoFocus
+              />
 
-            {/* Suggestions Header */}
-            <Text style={[styles.suggestionsHeader, isDarkMode && styles.darkSuggestionsHeader]}>
-              ✨ {getTranslation(language, 'suggestions')}
-            </Text>
+              {/* Suggestions Header */}
+              <Text style={[styles.suggestionsHeader, isDarkMode && styles.darkSuggestionsHeader]}>
+                ✨ {getTranslation(language, 'suggestions')}
+              </Text>
 
-            {/* Suggestion Chips */}
-            <View style={styles.suggestionsContainer}>
-              {(language === 'hi' || language === 'mr'
-                ? ['राधे कृष्ण', 'श्री राम', 'ॐ नमः शिवाय', 'हरे कृष्ण', 'ॐ नमो नारायणाय']
-                : ['Radhe Krishna', 'Shri Ram', 'Om Namah Shivaya', 'Hare Krishna', 'Om Namo Narayanaya']
-              ).map((sug) => (
+              {/* Suggestion Chips */}
+              <View style={styles.suggestionsContainer}>
+                {(language === 'hi' || language === 'mr'
+                  ? ['राधे कृष्ण', 'श्री राम', 'ॐ नमः शिवाय', 'हरे कृष्ण', 'ॐ नमो नारायणाय']
+                  : ['Radhe Krishna', 'Shri Ram', 'Om Namah Shivaya', 'Hare Krishna', 'Om Namo Narayanaya']
+                ).map((sug) => (
+                  <TouchableOpacity
+                    key={sug}
+                    style={[
+                      styles.suggestionChip,
+                      isDarkMode && styles.darkSuggestionChip,
+                      customNaamInput.trim() === sug && (isDarkMode ? styles.darkSuggestionChipSelected : styles.suggestionChipSelected)
+                    ]}
+                    onPress={() => setCustomNaamInput(sug)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[
+                      styles.suggestionChipText,
+                      isDarkMode && styles.darkSuggestionChipText,
+                      customNaamInput.trim() === sug && (isDarkMode ? styles.darkSuggestionChipTextSelected : styles.suggestionChipTextSelected)
+                    ]}>
+                      {sug}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <View style={styles.customModalButtons}>
                 <TouchableOpacity
-                  key={sug}
-                  style={[
-                    styles.suggestionChip,
-                    isDarkMode && styles.darkSuggestionChip,
-                    customNaamInput.trim() === sug && (isDarkMode ? styles.darkSuggestionChipSelected : styles.suggestionChipSelected)
-                  ]}
-                  onPress={() => setCustomNaamInput(sug)}
-                  activeOpacity={0.7}
+                  style={[styles.customModalBtnCancel, isDarkMode && styles.darkCustomModalBtnCancel]}
+                  onPress={() => {
+                    setCustomNaamInput('');
+                    setIsAddCustomModalVisible(false);
+                  }}
+                  activeOpacity={0.8}
                 >
-                  <Text style={[
-                    styles.suggestionChipText,
-                    isDarkMode && styles.darkSuggestionChipText,
-                    customNaamInput.trim() === sug && (isDarkMode ? styles.darkSuggestionChipTextSelected : styles.suggestionChipTextSelected)
-                  ]}>
-                    {sug}
+                  <Text style={[styles.customModalBtnCancelText, isDarkMode && styles.darkCustomModalBtnCancelText]}>
+                    {getTranslation(language, 'cancel')}
                   </Text>
                 </TouchableOpacity>
-              ))}
-            </View>
 
-            <View style={styles.customModalButtons}>
-              <TouchableOpacity
-                style={[styles.customModalBtnCancel, isDarkMode && styles.darkCustomModalBtnCancel]}
-                onPress={() => {
-                  setCustomNaamInput('');
-                  setIsAddCustomModalVisible(false);
-                }}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.customModalBtnCancelText, isDarkMode && styles.darkCustomModalBtnCancelText]}>
-                  {getTranslation(language, 'cancel')}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.customModalBtnSave, isDarkMode && styles.darkCustomModalBtnSave]}
-                onPress={handleSaveCustomNaam}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.customModalBtnSaveText, isDarkMode && styles.darkCustomModalBtnSaveText]}>
-                  {getTranslation(language, 'save')}
-                </Text>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.customModalBtnSave, isDarkMode && styles.darkCustomModalBtnSave]}
+                  onPress={handleSaveCustomNaam}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.customModalBtnSaveText, isDarkMode && styles.darkCustomModalBtnSaveText]}>
+                    {getTranslation(language, 'save')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        </View>
+          </TouchableWithoutFeedback>
+        </TouchableOpacity>
       </Modal>
     </SafeAreaView>
   );

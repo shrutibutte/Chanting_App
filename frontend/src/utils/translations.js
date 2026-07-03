@@ -83,6 +83,7 @@ export const translations = {
     chantComplete: "Chant complete!",
     excellentCompleteSession: "Excellent! You have completed your chanting session.",
     close: "Close",
+    cancel: "Cancel",
 
     // ProgressScreen
     progressTitle: "Progress",
@@ -279,6 +280,7 @@ export const translations = {
     chantComplete: "जाप पूर्ण!",
     excellentCompleteSession: "उत्कृष्ट! आपने अपना जाप सत्र पूरा कर लिया है।",
     close: "बंद करें",
+    cancel: "रद्द करें",
 
     // ProgressScreen
     progressTitle: "प्रगति",
@@ -475,6 +477,7 @@ export const translations = {
     chantComplete: "जाप पूर्ण!",
     excellentCompleteSession: "उत्कृष्ट! तुम्ही तुमचे जाप सत्र यशस्वीरित्या पूर्ण केले आहे.",
     close: "बंद करा",
+    cancel: "रद्द करा",
 
     // ProgressScreen
     progressTitle: "प्रगती",

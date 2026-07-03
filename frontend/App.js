@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { View, StyleSheet, StatusBar, TouchableOpacity, Text, SafeAreaView, AppState, Dimensions, Animated, Easing, Modal } from 'react-native';
+import { View, StyleSheet, StatusBar, TouchableOpacity, Text, SafeAreaView, AppState, Dimensions, Animated, Easing, Modal, TouchableWithoutFeedback, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path } from 'react-native-svg';
 import { useStore } from './src/store/useStore';
@@ -453,7 +453,11 @@ export default function App() {
         animationType="fade"
         onRequestClose={() => setShowCelebrationModal(false)}
       >
-        <View style={styles.celebrationOverlay}>
+        <TouchableOpacity 
+          style={styles.celebrationOverlay} 
+          activeOpacity={1} 
+          onPress={() => setShowCelebrationModal(false)}
+        >
           {/* Confetti Rendering */}
           {confettiParticles.map((p, idx) => {
             const translateY = fallAnims[idx].interpolate({
@@ -488,123 +492,125 @@ export default function App() {
           })}
 
           {/* Celebration Card */}
-          <SafeAreaView style={styles.celebrationContent}>
-            <View style={[styles.celebrationCard, { backgroundColor: theme.card }]}>
-              
-              {/* Badge & Glow Container */}
-              <View style={{ width: 150, height: 150, alignItems: 'center', justifyContent: 'center', marginBottom: 28, position: 'relative' }}>
+          <TouchableWithoutFeedback>
+            <SafeAreaView style={styles.celebrationContent}>
+              <View style={[styles.celebrationCard, { backgroundColor: theme.card }]}>
                 
-                {/* Glowing pulsing background ring */}
-                <Animated.View 
-                  style={[
-                    styles.glowRing,
-                    {
-                      backgroundColor: theme.accent,
-                      shadowColor: theme.accent,
-                      transform: [
-                        { scale: glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.95, 1.3] }) }
-                      ],
-                      opacity: glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.15, 0.5] })
-                    }
-                  ]}
-                />
+                {/* Badge & Glow Container */}
+                <View style={{ width: 150, height: 150, alignItems: 'center', justifyContent: 'center', marginBottom: 28, position: 'relative' }}>
+                  
+                  {/* Glowing pulsing background ring */}
+                  <Animated.View 
+                    style={[
+                      styles.glowRing,
+                      {
+                        backgroundColor: theme.accent,
+                        shadowColor: theme.accent,
+                        transform: [
+                          { scale: glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.95, 1.3] }) }
+                        ],
+                        opacity: glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.15, 0.5] })
+                      }
+                    ]}
+                  />
 
-                <Animated.View 
-                  style={[
-                    styles.badgeGlow,
-                    {
-                      backgroundColor: theme.id === 'darkTemple' ? '#111111' : '#FFF2E6',
-                      borderColor: theme.id === 'darkTemple' ? '#333333' : '#FFDDC8',
-                      shadowColor: theme.accent,
-                      transform: [{ scale: badgeScale }, { rotate: badgeRotateInterpolate }],
-                      marginBottom: 0
-                    }
-                  ]}
-                />
-                
-                <View style={[styles.badgeCircle, { backgroundColor: theme.accent, position: 'absolute', zIndex: 10 }]}>
-                  <Text style={styles.badgeEmoji}>{celebrationDetails.emoji}</Text>
-                  <View style={styles.streakBadgeTextContainer}>
-                    <Text style={styles.streakBadgeTextVal}>{currentStreak}</Text>
-                    <Text style={[styles.streakBadgeTextLabel, { color: '#FFFFFF' }]}>
-                      {getTranslation(language, 'days').toUpperCase()}
-                    </Text>
+                  <Animated.View 
+                    style={[
+                      styles.badgeGlow,
+                      {
+                        backgroundColor: theme.id === 'darkTemple' ? '#111111' : '#FFF2E6',
+                        borderColor: theme.id === 'darkTemple' ? '#333333' : '#FFDDC8',
+                        shadowColor: theme.accent,
+                        transform: [{ scale: badgeScale }, { rotate: badgeRotateInterpolate }],
+                        marginBottom: 0
+                      }
+                    ]}
+                  />
+                  
+                  <View style={[styles.badgeCircle, { backgroundColor: theme.accent, position: 'absolute', zIndex: 10 }]}>
+                    <Text style={styles.badgeEmoji}>{celebrationDetails.emoji}</Text>
+                    <View style={styles.streakBadgeTextContainer}>
+                      <Text style={styles.streakBadgeTextVal}>{currentStreak}</Text>
+                      <Text style={[styles.streakBadgeTextLabel, { color: '#FFFFFF' }]}>
+                        {getTranslation(language, 'days').toUpperCase()}
+                      </Text>
+                    </View>
                   </View>
+
+                  {/* Floating sparkling diamond stars */}
+                  {SPARKLE_CONFIG.map((s, idx) => {
+                    const scale = sparkleAnims[idx].interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, 1.1],
+                    });
+                    const opacity = sparkleAnims[idx].interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, 1],
+                    });
+                    const rotate = sparkleAnims[idx].interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['45deg', '135deg'],
+                    });
+
+                    return (
+                      <Animated.View
+                        key={idx}
+                        style={{
+                          position: 'absolute',
+                          top: s.top,
+                          left: s.left,
+                          right: s.right,
+                          bottom: s.bottom,
+                          width: s.size,
+                          height: s.size,
+                          opacity,
+                          transform: [{ scale }, { rotate }],
+                          pointerEvents: 'none',
+                          zIndex: 15,
+                        }}
+                      >
+                        <Svg width={s.size} height={s.size} viewBox="0 0 24 24" fill="none">
+                          <Path 
+                            d="M12 0L15.5 8.5L24 12L15.5 15.5L12 24L8.5 15.5L0 12L8.5 8.5L12 0Z" 
+                            fill={theme.id === 'darkTemple' ? "#FFFFFF" : "#FFD166"} 
+                          />
+                        </Svg>
+                      </Animated.View>
+                    );
+                  })}
+
                 </View>
 
-                {/* Floating sparkling diamond stars */}
-                {SPARKLE_CONFIG.map((s, idx) => {
-                  const scale = sparkleAnims[idx].interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0, 1.1],
-                  });
-                  const opacity = sparkleAnims[idx].interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0, 1],
-                  });
-                  const rotate = sparkleAnims[idx].interpolate({
-                    inputRange: [0, 1],
-                    outputRange: ['45deg', '135deg'],
-                  });
+                <Text style={[styles.celebrationTitle, { color: theme.primaryText }]}>
+                  {celebrationDetails.title}
+                </Text>
+                
+                <Text style={[styles.celebrationMessage, { color: theme.secondaryText }]}>
+                  {celebrationDetails.msg}
+                </Text>
 
-                  return (
-                    <Animated.View
-                      key={idx}
-                      style={{
-                        position: 'absolute',
-                        top: s.top,
-                        left: s.left,
-                        right: s.right,
-                        bottom: s.bottom,
-                        width: s.size,
-                        height: s.size,
-                        opacity,
-                        transform: [{ scale }, { rotate }],
-                        pointerEvents: 'none',
-                        zIndex: 15,
-                      }}
-                    >
-                      <Svg width={s.size} height={s.size} viewBox="0 0 24 24" fill="none">
-                        <Path 
-                          d="M12 0L15.5 8.5L24 12L15.5 15.5L12 24L8.5 15.5L0 12L8.5 8.5L12 0Z" 
-                          fill={theme.id === 'darkTemple' ? "#FFFFFF" : "#FFD166"} 
-                        />
-                      </Svg>
-                    </Animated.View>
-                  );
-                })}
+                <View style={[styles.streakHighlightBox, { backgroundColor: theme.id === 'darkTemple' ? '#111111' : '#FFF2E6', borderColor: theme.id === 'darkTemple' ? '#222222' : '#FFE6D3' }]}>
+                  <Text style={[styles.streakHighlightTitle, { color: theme.secondaryText }]}>
+                    {getTranslation(language, 'currentStreakUpper')}
+                  </Text>
+                  <Text style={[styles.streakHighlightVal, { color: theme.accent }]}>
+                    {currentStreak} {getTranslation(language, 'days')}
+                  </Text>
+                </View>
 
+                <TouchableOpacity 
+                  style={[styles.continueButton, { backgroundColor: theme.accent, shadowColor: theme.accent }]} 
+                  onPress={() => setShowCelebrationModal(false)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.continueButtonText, { color: '#FFFFFF' }]}>
+                    {getTranslation(language, 'continue')}
+                  </Text>
+                </TouchableOpacity>
               </View>
-
-              <Text style={[styles.celebrationTitle, { color: theme.primaryText }]}>
-                {celebrationDetails.title}
-              </Text>
-              
-              <Text style={[styles.celebrationMessage, { color: theme.secondaryText }]}>
-                {celebrationDetails.msg}
-              </Text>
-
-              <View style={[styles.streakHighlightBox, { backgroundColor: theme.id === 'darkTemple' ? '#111111' : '#FFF2E6', borderColor: theme.id === 'darkTemple' ? '#222222' : '#FFE6D3' }]}>
-                <Text style={[styles.streakHighlightTitle, { color: theme.secondaryText }]}>
-                  {getTranslation(language, 'currentStreakUpper')}
-                </Text>
-                <Text style={[styles.streakHighlightVal, { color: theme.accent }]}>
-                  {currentStreak} {getTranslation(language, 'days')}
-                </Text>
-              </View>
-
-              <TouchableOpacity 
-                style={[styles.continueButton, { backgroundColor: theme.accent, shadowColor: theme.accent }]} 
-                onPress={() => setShowCelebrationModal(false)}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.continueButtonText, { color: '#FFFFFF' }]}>
-                  {getTranslation(language, 'continue')}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </SafeAreaView>
-        </View>
+            </SafeAreaView>
+          </TouchableWithoutFeedback>
+        </TouchableOpacity>
       </Modal>
     </View>
   );
@@ -622,7 +628,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
     paddingVertical: 16,
-    paddingBottom: 32, // Safe area bottom
+    paddingBottom: Platform.OS === 'android' ? 65 : 34,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     shadowColor: '#000',
