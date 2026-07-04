@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, TouchableWithoutFeedback, StyleSheet, ActivityIndicator, SafeAreaView, Modal, SectionList, FlatList, StatusBar, ScrollView, TextInput, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, TouchableWithoutFeedback, StyleSheet, ActivityIndicator, Modal, SectionList, FlatList, StatusBar, ScrollView, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Path, Line, Rect, Polyline } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
@@ -158,7 +159,11 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
 
   useEffect(() => {
     const initDB = async () => {
-      await syncOfflineCounter();
+      try {
+        await syncOfflineCounter();
+      } catch (e) {
+        console.log("Initial sync failed", e.message);
+      }
       fetchStats();
     };
     initDB();
@@ -586,105 +591,109 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
         transparent={true}
         onRequestClose={() => setIsLogMalaModalVisible(false)}
       >
-        <TouchableOpacity 
-          style={styles.modalOverlay} 
-          activeOpacity={1} 
-          onPress={() => setIsLogMalaModalVisible(false)}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
         >
-          <TouchableWithoutFeedback>
-            <View style={[styles.modalContent, isDarkMode && styles.darkModalContent, { height: '55%' }]}>
-              <View style={styles.modalHeader}>
-                <Text style={[styles.modalTitle, isDarkMode && styles.darkModalTitle]}>{getTranslation(language, 'addLogCount')}</Text>
-                <TouchableOpacity onPress={() => setIsLogMalaModalVisible(false)}>
-                  <Text style={[styles.closeModalText, isDarkMode && styles.darkCloseModalText]}>✕</Text>
-                </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.modalOverlay} 
+            activeOpacity={1} 
+            onPress={() => setIsLogMalaModalVisible(false)}
+          >
+            <TouchableWithoutFeedback>
+              <View style={[styles.modalContent, isDarkMode && styles.darkModalContent, { height: '55%' }]}>
+                <View style={styles.modalHeader}>
+                  <Text style={[styles.modalTitle, isDarkMode && styles.darkModalTitle]}>{getTranslation(language, 'addLogCount')}</Text>
+                  <TouchableOpacity onPress={() => setIsLogMalaModalVisible(false)}>
+                    <Text style={[styles.closeModalText, isDarkMode && styles.darkCloseModalText]}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+                  <View style={styles.quickMalaContainer}>
+                    <TouchableOpacity
+                      style={[styles.quickMalaBtn, isDarkMode && styles.darkQuickMalaBtn]}
+                      onPress={() => {
+                        addManualCount(108);
+                        setIsLogMalaModalVisible(false);
+                      }}
+                    >
+                      <Text style={[styles.quickMalaBtnText, isDarkMode && styles.darkQuickMalaBtnText]}>+1 {getTranslation(language, 'malas')}</Text>
+                      <Text style={[styles.quickMalaBtnSub, isDarkMode && styles.darkQuickMalaBtnSub]}>108 {getTranslation(language, 'counts')}</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[styles.quickMalaBtn, isDarkMode && styles.darkQuickMalaBtn]}
+                      onPress={() => {
+                        addManualCount(216);
+                        setIsLogMalaModalVisible(false);
+                      }}
+                    >
+                      <Text style={[styles.quickMalaBtnText, isDarkMode && styles.darkQuickMalaBtnText]}>+2 {getTranslation(language, 'malas')}</Text>
+                      <Text style={[styles.quickMalaBtnSub, isDarkMode && styles.darkQuickMalaBtnSub]}>216 {getTranslation(language, 'counts')}</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.quickMalaContainer}>
+                    <TouchableOpacity
+                      style={[styles.quickMalaBtn, isDarkMode && styles.darkQuickMalaBtn]}
+                      onPress={() => {
+                        addManualCount(432);
+                        setIsLogMalaModalVisible(false);
+                      }}
+                    >
+                      <Text style={[styles.quickMalaBtnText, isDarkMode && styles.darkQuickMalaBtnText]}>+4 {getTranslation(language, 'malas')}</Text>
+                      <Text style={[styles.quickMalaBtnSub, isDarkMode && styles.darkQuickMalaBtnSub]}>432 {getTranslation(language, 'counts')}</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[styles.quickMalaBtn, isDarkMode && styles.darkQuickMalaBtn]}
+                      onPress={() => {
+                        addManualCount(864);
+                        setIsLogMalaModalVisible(false);
+                      }}
+                    >
+                      <Text style={[styles.quickMalaBtnText, isDarkMode && styles.darkQuickMalaBtnText]}>+8 {getTranslation(language, 'malas')}</Text>
+                      <Text style={[styles.quickMalaBtnSub, isDarkMode && styles.darkQuickMalaBtnSub]}>864 {getTranslation(language, 'counts')}</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.customCountContainer}>
+                    <Text style={[styles.customCountLabel, isDarkMode && styles.darkCustomCountLabel]}>{getTranslation(language, 'orEnterCustomCounts')}</Text>
+                    <TextInput
+                      style={[styles.customCountInput, isDarkMode && styles.darkCustomCountInput]}
+                      value={customCountInput}
+                      onChangeText={(text) => setCustomCountInput(text.replace(/[^0-9]/g, '').slice(0, 6))}
+                      keyboardType="numeric"
+                      placeholder="e.g. 50 or 108"
+                      placeholderTextColor={isDarkMode ? "#666" : "#A0A0A0"}
+                    />
+                  </View>
+
+                  {/* Disable button if count is not valid (empty, 0, or not a valid number) */}
+                  <TouchableOpacity
+                    style={[
+                      styles.submitCountBtn, 
+                      isDarkMode && styles.darkSubmitCountBtn,
+                      (!customCountInput || !/^\d{1,6}$/.test(customCountInput) || parseInt(customCountInput, 10) <= 0) && styles.submitCountBtnDisabled
+                    ]}
+                    disabled={!customCountInput || !/^\d{1,6}$/.test(customCountInput) || parseInt(customCountInput, 10) <= 0}
+                    onPress={() => {
+                      const count = parseInt(customCountInput, 10);
+                      if (!isNaN(count) && count > 0) {
+                        addManualCount(count);
+                        setCustomCountInput('');
+                        setIsLogMalaModalVisible(false);
+                      }
+                    }}
+                  >
+                    <Text style={[styles.submitCountBtnText, isDarkMode && styles.darkSubmitCountBtnText]}>{getTranslation(language, 'addCount')}</Text>
+                  </TouchableOpacity>
+                </ScrollView>
               </View>
-
-              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
-                <View style={styles.quickMalaContainer}>
-                  <TouchableOpacity
-                    style={[styles.quickMalaBtn, isDarkMode && styles.darkQuickMalaBtn]}
-                    onPress={() => {
-                      addManualCount(108);
-                      setIsLogMalaModalVisible(false);
-                      setTimeout(() => syncOfflineCounter(), 500);
-                    }}
-                  >
-                    <Text style={[styles.quickMalaBtnText, isDarkMode && styles.darkQuickMalaBtnText]}>+1 {getTranslation(language, 'malas')}</Text>
-                    <Text style={[styles.quickMalaBtnSub, isDarkMode && styles.darkQuickMalaBtnSub]}>108 {getTranslation(language, 'counts')}</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[styles.quickMalaBtn, isDarkMode && styles.darkQuickMalaBtn]}
-                    onPress={() => {
-                      addManualCount(216);
-                      setIsLogMalaModalVisible(false);
-                      setTimeout(() => syncOfflineCounter(), 500);
-                    }}
-                  >
-                    <Text style={[styles.quickMalaBtnText, isDarkMode && styles.darkQuickMalaBtnText]}>+2 {getTranslation(language, 'malas')}</Text>
-                    <Text style={[styles.quickMalaBtnSub, isDarkMode && styles.darkQuickMalaBtnSub]}>216 {getTranslation(language, 'counts')}</Text>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.quickMalaContainer}>
-                  <TouchableOpacity
-                    style={[styles.quickMalaBtn, isDarkMode && styles.darkQuickMalaBtn]}
-                    onPress={() => {
-                      addManualCount(432);
-                      setIsLogMalaModalVisible(false);
-                      setTimeout(() => syncOfflineCounter(), 500);
-                    }}
-                  >
-                    <Text style={[styles.quickMalaBtnText, isDarkMode && styles.darkQuickMalaBtnText]}>+4 {getTranslation(language, 'malas')}</Text>
-                    <Text style={[styles.quickMalaBtnSub, isDarkMode && styles.darkQuickMalaBtnSub]}>432 {getTranslation(language, 'counts')}</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[styles.quickMalaBtn, isDarkMode && styles.darkQuickMalaBtn]}
-                    onPress={() => {
-                      addManualCount(864);
-                      setIsLogMalaModalVisible(false);
-                      setTimeout(() => syncOfflineCounter(), 500);
-                    }}
-                  >
-                    <Text style={[styles.quickMalaBtnText, isDarkMode && styles.darkQuickMalaBtnText]}>+8 {getTranslation(language, 'malas')}</Text>
-                    <Text style={[styles.quickMalaBtnSub, isDarkMode && styles.darkQuickMalaBtnSub]}>864 {getTranslation(language, 'counts')}</Text>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.customCountContainer}>
-                  <Text style={[styles.customCountLabel, isDarkMode && styles.darkCustomCountLabel]}>{getTranslation(language, 'orEnterCustomCounts')}</Text>
-                  <TextInput
-                    style={[styles.customCountInput, isDarkMode && styles.darkCustomCountInput]}
-                    value={customCountInput}
-                    onChangeText={setCustomCountInput}
-                    keyboardType="numeric"
-                    placeholder="e.g. 50 or 108"
-                    placeholderTextColor={isDarkMode ? "#666" : "#A0A0A0"}
-                  />
-                </View>
-
-                <TouchableOpacity
-                  style={[styles.submitCountBtn, isDarkMode && styles.darkSubmitCountBtn]}
-                  onPress={() => {
-                    const count = parseInt(customCountInput, 10);
-                    if (!isNaN(count) && count > 0) {
-                      addManualCount(count);
-                      setCustomCountInput('');
-                      setIsLogMalaModalVisible(false);
-                      setTimeout(() => syncOfflineCounter(), 500);
-                    } else {
-                      Alert.alert(getTranslation(language, 'invalidCount'), getTranslation(language, 'enterValidCountMsg'));
-                    }
-                  }}
-                >
-                  <Text style={[styles.submitCountBtnText, isDarkMode && styles.darkSubmitCountBtnText]}>{getTranslation(language, 'addCount')}</Text>
-                </TouchableOpacity>
-              </ScrollView>
-            </View>
-          </TouchableWithoutFeedback>
-        </TouchableOpacity>
+            </TouchableWithoutFeedback>
+          </TouchableOpacity>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Level-Up Celebration Modal */}
@@ -944,7 +953,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 40,
+    paddingTop: 12,
     marginBottom: 10,
     marginTop: 10,
   },
@@ -1297,6 +1306,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
+  },
+  submitCountBtnDisabled: {
+    backgroundColor: '#CCCCCC',
+    opacity: 0.5,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   submitCountBtnText: {
     color: '#FFFFFF',

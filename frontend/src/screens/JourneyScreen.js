@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useStore, getLevelInfo, JOURNEY_LEVELS } from '../store/useStore';
 import { getTranslation } from '../utils/translations';
@@ -169,7 +170,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 24,
-    paddingTop: 40,
+    paddingTop: 12,
     marginBottom: 10,
     marginTop: 10,
   },

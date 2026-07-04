@@ -18,6 +18,15 @@ const JWT_SECRET = process.env.JWT_SECRET || 'spiritual_secret_108';
 app.use(cors());
 app.use(express.json());
 
+// Request logger middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  if (req.body && Object.keys(req.body).length > 0) {
+    console.log("Body:", JSON.stringify(req.body));
+  }
+  next();
+});
+
 // Handle malformed JSON body errors
 app.use((err, req, res, next) => {
   if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
@@ -246,6 +255,19 @@ app.post('/custom-naams', authenticateToken, async (req, res) => {
     res.json({ success: true, naam: created });
   } catch (error) {
     res.status(500).json({ error: 'Failed to save custom name', details: error.message });
+  }
+});
+
+// Reset user's chanting records
+app.post('/stats/reset', authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+  try {
+    await prisma.chantRecord.deleteMany({
+      where: { userId }
+    });
+    res.json({ success: true, message: 'All chanting records reset successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to reset stats', details: error.message });
   }
 });
 

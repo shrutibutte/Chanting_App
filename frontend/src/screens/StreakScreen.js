@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { useStore } from '../store/useStore';
 import { getLocalDateString } from '../utils/date.js';
@@ -285,7 +286,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 40,
+    paddingTop: 12,
     paddingBottom: 10,
     marginTop: 10,
     position: 'relative',
@@ -293,7 +294,7 @@ const styles = StyleSheet.create({
   exitButton: {
     position: 'absolute',
     left: 20,
-    top: 38,
+    top: 10,
     width: 38,
     height: 38,
     borderRadius: 19,

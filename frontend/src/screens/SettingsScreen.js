@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Switch, TouchableOpacity, Alert, ScrollView, Modal, TextInput, TouchableWithoutFeedback, Platform } from 'react-native';
+import { View, Text, StyleSheet, Switch, TouchableOpacity, Alert, ScrollView, Modal, TextInput, TouchableWithoutFeedback, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useStore } from '../store/useStore';
 import { Ionicons, Feather, MaterialIcons } from '@expo/vector-icons';
 import { requestNotificationPermissions, scheduleDailyReminder, cancelAllReminders } from '../utils/notifications';
@@ -9,6 +10,7 @@ import { getTheme } from '../utils/themes';
 export default function SettingsScreen() {
   const { 
     logout, 
+    resetCount,
     isReminderEnabled, 
     reminderTime, 
     setReminderSettings,
@@ -42,6 +44,75 @@ export default function SettingsScreen() {
   const [tempTime, setTempTime] = useState('');
 
   const [isLanguageModalVisible, setIsLanguageModalVisible] = useState(false);
+
+  const handleLogoutPress = () => {
+    const { unsyncedTaps } = useStore.getState();
+    
+    const performLogout = async () => {
+      await logout();
+    };
+
+    if (unsyncedTaps > 0) {
+      Alert.alert(
+        language === 'hi' ? 'असिंक्रनाइज़्ड गिनती' : language === 'mr' ? 'असिंक्रोनाइझ्ड संख्या' : 'Unsynced Counts',
+        language === 'hi'
+          ? 'आपके पास कुछ ऐसी गिनती है जो अभी तक डेटाबेस में सहेजी नहीं गई है। लॉगआउट करने पर ये मिट जाएंगी। क्या आप अभी भी लॉगआउट करना चाहते हैं?'
+          : language === 'mr'
+          ? 'तुमच्याकडे काही संख्या आहेत ज्या अजून डेटाबेसमध्ये जतन केल्या नाहीत. लॉगआउट केल्यास त्या नष्ट होतील. तुम्हाला अजूनही लॉगआउट करायचे आहे का?'
+          : 'You have unsynced counts. Logging out now will permanently delete them from this device. Do you still want to log out?',
+        [
+          { text: getTranslation(language, 'cancel'), style: 'cancel' },
+          { 
+            text: language === 'hi' ? 'हाँ, लॉगआउट करें' : language === 'mr' ? 'होय, लॉगआउट करा' : 'Yes, Log Out', 
+            style: 'destructive', 
+            onPress: performLogout 
+          }
+        ]
+      );
+    } else {
+      Alert.alert(
+        getTranslation(language, 'logout'),
+        language === 'hi' ? 'क्या आप वाकई लॉगआउट करना चाहते हैं?' : language === 'mr' ? 'तुम्हाला नक्की लॉगआउट करायचे आहे का?' : 'Are you sure you want to log out?',
+        [
+          { text: getTranslation(language, 'cancel'), style: 'cancel' },
+          { 
+            text: getTranslation(language, 'logout'), 
+            style: 'destructive',
+            onPress: performLogout
+          }
+        ]
+      );
+    }
+  };
+
+  const handleResetCount = () => {
+    Alert.alert(
+      language === 'hi' ? 'गिनती रीसेट करें' : language === 'mr' ? 'संख्या रीसेट करा' : 'Reset Count',
+      language === 'hi' 
+        ? 'क्या आप वाकई अपनी कुल जाप संख्या को रीसेट करना चाहते हैं? इसे वापस नहीं लिया जा सकता।' 
+        : language === 'mr' 
+        ? 'तुम्हाला नक्की तुमची एकूण जाप संख्या रीसेट करायची आहे का? हे पूर्ववत केले जाऊ शकत नाही.' 
+        : 'Are you sure you want to reset your total count? This action cannot be undone.',
+      [
+        { text: getTranslation(language, 'cancel'), style: 'cancel' },
+        {
+          text: language === 'hi' ? 'रीसेट करें' : language === 'mr' ? 'रीसेट करा' : 'Reset',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await resetCount();
+              Alert.alert(
+                getTranslation(language, 'success'),
+                language === 'hi' ? 'गिनती सफलतापूर्वक रीसेट कर दी गई है।' : language === 'mr' ? 'संख्या यशस्वीरित्या रीसेट केली आहे.' : 'Count reset successfully.'
+              );
+            } catch (error) {
+              Alert.alert(getTranslation(language, 'error'), error.message);
+            }
+          }
+        }
+      ]
+    );
+  };
 
   const handleToggleReminder = async (enabled) => {
     if (enabled) {
@@ -282,8 +353,22 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* RESET COUNT BUTTON */}
+        <TouchableOpacity 
+          style={[styles.cardRow, { backgroundColor: theme.card, borderColor: theme.border, justifyContent: 'center', paddingVertical: 14, marginBottom: 12 }]} 
+          onPress={handleResetCount}
+        >
+          <Ionicons name="refresh-outline" size={20} color={theme.accent} style={{ marginRight: 8 }} />
+          <Text style={[styles.logoutText, { color: theme.accent }]}>
+            {language === 'hi' ? 'गिनती रीसेट करें' : language === 'mr' ? 'संख्या रीसेट करा' : 'Reset Count'}
+          </Text>
+        </TouchableOpacity>
+
         {/* LOGOUT BUTTON */}
-        <TouchableOpacity style={[styles.cardRow, { backgroundColor: theme.card, borderColor: theme.border, justifyContent: 'center', paddingVertical: 14 }]} onPress={logout}>
+        <TouchableOpacity 
+          style={[styles.cardRow, { backgroundColor: theme.card, borderColor: theme.border, justifyContent: 'center', paddingVertical: 14 }]} 
+          onPress={handleLogoutPress}
+        >
           <Ionicons name="log-out-outline" size={20} color={theme.accent} style={{ marginRight: 8 }} />
           <Text style={[styles.logoutText, { color: theme.accent }]}>
             {getTranslation(language, 'logout')}
@@ -467,7 +552,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 24,
-    paddingTop: 40,
+    paddingTop: 12,
     marginBottom: 10,
     marginTop: 10,
   },

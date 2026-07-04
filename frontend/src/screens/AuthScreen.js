@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { useStore } from '../store/useStore';
 import { apiCall } from '../api/client';
@@ -11,10 +11,27 @@ export default function AuthScreen() {
   const [otp, setOtp] = useState('');
   const [isOtpSent, setIsOtpSent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [otpTimer, setOtpTimer] = useState(600); // 10 minutes (600 seconds)
   const setLogin = useStore((state) => state.login);
   const language = useStore((state) => state.language);
   const themeId = useStore((state) => state.themeId);
   const theme = getTheme(themeId);
+
+  useEffect(() => {
+    let interval;
+    if (isOtpSent && otpTimer > 0) {
+      interval = setInterval(() => {
+        setOtpTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isOtpSent, otpTimer]);
+
+  const formatOtpTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const handleSendOtp = async () => {
     if (!email.includes('@')) return Alert.alert(getTranslation(language, 'invalidEmail'), getTranslation(language, 'enterValidEmail'));
@@ -22,6 +39,8 @@ export default function AuthScreen() {
     try {
       await apiCall('/auth/send-otp', 'POST', { email });
       setIsOtpSent(true);
+      setOtpTimer(600);
+      setOtp('');
       Alert.alert(getTranslation(language, 'otpSent'), getTranslation(language, 'checkEmailOtp'));
     } catch (error) {
       Alert.alert(getTranslation(language, 'error'), error.message);
@@ -80,6 +99,21 @@ export default function AuthScreen() {
             onChangeText={setOtp}
             maxLength={6}
           />
+          {otpTimer > 0 ? (
+            <Text style={{ textAlign: 'center', color: theme.secondaryText, marginBottom: 24, fontSize: 14 }}>
+              {language === 'hi' ? `ओटीपी ${formatOtpTime(otpTimer)} में समाप्त होगा` : language === 'mr' ? `ओटीपी ${formatOtpTime(otpTimer)} मध्ये कालबाह्य होईल` : `OTP expires in ${formatOtpTime(otpTimer)}`}
+            </Text>
+          ) : (
+            <TouchableOpacity 
+              style={[styles.button, { backgroundColor: theme.card, borderColor: theme.accent, borderWidth: 1.5, marginBottom: 24 }]} 
+              onPress={handleSendOtp}
+              disabled={loading}
+            >
+              <Text style={[styles.buttonText, { color: theme.accent }]}>
+                {language === 'hi' ? 'ओटीपी पुनः भेजें' : language === 'mr' ? 'ओटीपी पुन्हा पाठवा' : 'Resend OTP'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </>
       )}
 

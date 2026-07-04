@@ -125,6 +125,29 @@ export function updateWidget(todayCount, dailyGoal, streak) {
   }
 }
 
+export const mergeUnsyncedRecords = (backendRecords, unsyncedTapsByDate) => {
+  const merged = [...backendRecords];
+  if (!unsyncedTapsByDate) return merged;
+
+  for (const [dateStr, unsyncedCount] of Object.entries(unsyncedTapsByDate)) {
+    if (unsyncedCount <= 0) continue;
+    const existingIdx = merged.findIndex(r => r.date === dateStr);
+    if (existingIdx !== -1) {
+      merged[existingIdx].count = merged[existingIdx].count + unsyncedCount;
+    } else {
+      merged.push({
+        id: `local-unsynced-${dateStr}`,
+        userId: 'local',
+        count: unsyncedCount,
+        date: dateStr,
+        timestamp: new Date(dateStr).toISOString()
+      });
+    }
+  }
+
+  return merged.sort((a, b) => b.date.localeCompare(a.date));
+};
+
 export const useStore = create(
   persist(
     (set, get) => ({
@@ -133,6 +156,7 @@ export const useStore = create(
       totalCount: 0,       // Total all-time taps (synced + unsynced)
       todayCount: 0,       // Today's total taps
       unsyncedTaps: 0,     // Taps waiting to be sent to backend
+      unsyncedTapsByDate: {}, // Map of YYYY-MM-DD -> count for offline preservation
       sessionCount: 0,     // Current active session taps
       lastSyncDate: null,
       historyRecords: [],  // Array of raw daily records from backend
@@ -263,13 +287,24 @@ export const useStore = create(
 
       // Authentication
       login: (token, emailAddr) => set({ userToken: token, email: emailAddr }),
-      logout: () => {
+      logout: async () => {
+        // Sync any unsynced taps first if there's a token
+        const state = get();
+        if (state.userToken && state.unsyncedTaps > 0) {
+          try {
+            const { syncOfflineCounter } = require('../api/client');
+            await syncOfflineCounter();
+          } catch (e) {
+            console.log("Failed to sync before logout", e.message);
+          }
+        }
         set({ 
           userToken: null, 
           email: null, 
           totalCount: 0, 
           todayCount: 0, 
           unsyncedTaps: 0, 
+          unsyncedTapsByDate: {},
           sessionCount: 0, 
           lastSyncDate: null,
           historyRecords: [],
@@ -291,6 +326,34 @@ export const useStore = create(
           autoCalculateGoals: true
         });
         updateWidget(0, 108, 0);
+      },
+
+      // Reset count action
+      resetCount: async () => {
+        try {
+          const { apiCall } = require('../api/client');
+          if (get().userToken) {
+            await apiCall('/stats/reset', 'POST');
+          }
+        } catch (err) {
+          console.log("Failed to reset stats on server", err.message);
+          throw err;
+        } finally {
+          set({
+            totalCount: 0,
+            todayCount: 0,
+            unsyncedTaps: 0,
+            sessionCount: 0,
+            historyRecords: [],
+            lastUnlockedLevel: 0,
+            showLevelModal: false,
+            unlockedLevelInfo: null,
+            lastCelebrationDate: null,
+            lastStreakMaintainedPopupDate: null,
+          });
+          const streak = calculateCurrentStreak([], 0);
+          updateWidget(0, get().goals?.daily || 108, streak);
+        }
       },
 
       // Session logic
@@ -403,16 +466,28 @@ export const useStore = create(
           const streak = calculateCurrentStreak(nextHistoryRecords, nextTodayCount);
           updateWidget(nextTodayCount, state.goals.daily, streak);
 
+          const nextUnsynced = { ...state.unsyncedTapsByDate };
+          nextUnsynced[currentDate] = (nextUnsynced[currentDate] || 0) + countToAdd;
+
           return {
             totalCount: nextTotalCount,
             todayCount: nextTodayCount,
             unsyncedTaps: state.unsyncedTaps + countToAdd,
+            unsyncedTapsByDate: nextUnsynced,
             lastSyncDate: currentDate,
             historyRecords: nextHistoryRecords,
             ...celebrationUpdates,
             ...levelUpdates
           };
         });
+
+        // Trigger sync immediately!
+        try {
+          const { syncOfflineCounter } = require('../api/client');
+          syncOfflineCounter();
+        } catch (e) {
+          console.log("Failed to sync manually added count immediately", e.message);
+        }
       },
 
       // Chanting logic
@@ -491,10 +566,14 @@ export const useStore = create(
           const streak = calculateCurrentStreak(nextHistoryRecords, nextTodayCount);
           updateWidget(nextTodayCount, state.goals.daily, streak);
 
+          const nextUnsynced = { ...state.unsyncedTapsByDate };
+          nextUnsynced[currentDate] = (nextUnsynced[currentDate] || 0) + 1;
+
           return {
             totalCount: nextTotalCount,
             todayCount: nextTodayCount,
             unsyncedTaps: state.unsyncedTaps + 1,
+            unsyncedTapsByDate: nextUnsynced,
             sessionCount: state.sessionCount + 1,
             lastSyncDate: currentDate,
             historyRecords: nextHistoryRecords,
@@ -509,22 +588,35 @@ export const useStore = create(
         unsyncedTaps: Math.max(0, state.unsyncedTaps - batchSize)
       })),
 
+      clearUnsyncedForDate: (date, countToClear) => set((state) => {
+        const nextUnsynced = { ...state.unsyncedTapsByDate };
+        if (nextUnsynced[date]) {
+          nextUnsynced[date] = Math.max(0, nextUnsynced[date] - countToClear);
+          if (nextUnsynced[date] === 0) {
+            delete nextUnsynced[date];
+          }
+        }
+        const totalUnsynced = Object.values(nextUnsynced).reduce((a, b) => a + b, 0);
+        return { unsyncedTapsByDate: nextUnsynced, unsyncedTaps: totalUnsynced };
+      }),
+
       // Sync Lock
       isSyncing: false,
       setIsSyncing: (status) => set({ isSyncing: status }),
 
       // Sync backend stats with local stats
       setStats: (total, today, records = []) => set((state) => {
+        const mergedRecords = mergeUnsyncedRecords(records, state.unsyncedTapsByDate);
         const currentLevelInfo = getLevelInfo(total);
         const dailyTarget = state.goals?.daily || state.dailyGoal || 108;
         
-        const streak = calculateCurrentStreak(records, today);
+        const streak = calculateCurrentStreak(mergedRecords, today);
         updateWidget(today, dailyTarget, streak);
 
         return { 
           totalCount: total, 
           todayCount: today,
-          historyRecords: records,
+          historyRecords: mergedRecords,
           lastSyncDate: getLocalDateString(),
           lastUnlockedLevel: Math.max(state.lastUnlockedLevel, currentLevelInfo.levelIndex)
         };
@@ -544,6 +636,14 @@ export const useStore = create(
             // Force reset isSyncing to false on startup/reload to prevent lockouts
             state.setIsSyncing(false);
             
+            if (!state.unsyncedTapsByDate) {
+              state.unsyncedTapsByDate = {};
+              if (state.unsyncedTaps > 0) {
+                const fallbackDate = state.lastSyncDate || getLocalDateString();
+                state.unsyncedTapsByDate[fallbackDate] = state.unsyncedTaps;
+              }
+            }
+
             // Backward compatibility checks
             const current = state;
             if (!current.goals || typeof current.goals !== 'object') {

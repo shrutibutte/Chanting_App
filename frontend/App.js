@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { View, StyleSheet, StatusBar, TouchableOpacity, Text, SafeAreaView, AppState, Dimensions, Animated, Easing, Modal, TouchableWithoutFeedback, Platform } from 'react-native';
+import { View, StyleSheet, StatusBar, TouchableOpacity, Text, AppState, Dimensions, Animated, Easing, Modal, TouchableWithoutFeedback, Platform } from 'react-native';
+import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path } from 'react-native-svg';
 import { useStore } from './src/store/useStore';
@@ -57,8 +58,18 @@ const confettiParticles = Array.from({ length: 40 }).map((_, i) => {
 function BottomTabBar({ activeTab, onTabSelect }) {
   const themeId = useStore((state) => state.themeId);
   const theme = getTheme(themeId);
+  const insets = useSafeAreaInsets();
+
   return (
-    <View style={[styles.tabContainer, { backgroundColor: theme.card, borderTopColor: theme.border, borderTopWidth: 1 }]}>
+    <View style={[
+      styles.tabContainer, 
+      { 
+        backgroundColor: theme.card, 
+        borderTopColor: theme.border, 
+        borderTopWidth: 1,
+        paddingBottom: insets.bottom > 0 ? insets.bottom + 8 : 16
+      }
+    ]}>
       <TouchableOpacity style={styles.tabItem} onPress={() => onTabSelect('home')}>
         <Ionicons 
           name={activeTab === 'home' ? 'home' : 'home-outline'} 
@@ -94,7 +105,7 @@ function BottomTabBar({ activeTab, onTabSelect }) {
   );
 }
 
-export default function App() {
+function MainApp() {
   const [isChanting, setIsChanting] = useState(false);
   const [activeTab, setActiveTab] = useState('home');
   const [chantingTimer, setChantingTimer] = useState(0);
@@ -162,6 +173,12 @@ export default function App() {
 
     return streak;
   }, [historyRecords, todayCount]);
+
+  useEffect(() => {
+    if (!userToken) {
+      setActiveTab('home');
+    }
+  }, [userToken]);
 
   useEffect(() => {
     // Check for daily reset immediately on mount
@@ -628,7 +645,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
     paddingVertical: 16,
-    paddingBottom: Platform.OS === 'android' ? 65 : 34,
+    // paddingBottom: Platform.OS === 'android' ? 43 : 34,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     shadowColor: '#000',
@@ -884,3 +901,11 @@ const styles = StyleSheet.create({
     color: '#000000',
   },
 });
+
+export default function App() {
+  return (
+    <SafeAreaProvider>
+      <MainApp />
+    </SafeAreaProvider>
+  );
+}
