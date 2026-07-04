@@ -1,14 +1,14 @@
-import { useStore } from '../store/useStore';
+const getStore = () => require('../store/useStore').useStore;
 import { getLocalDateString } from '../utils/date.js';
 
 // Set your computer's local IP Address below if testing on physical device on the same Wifi
 // Use 'http://10.0.2.2:3030' for standard Android Emulator
 // Set your computer's local IP Address below if testing on physical device on the same Wifi
-// const API_URL = 'http://192.168.90.129:3030';
-const API_URL = "https://naam-jaap-app-backend.vercel.app"
+const API_URL = 'http://192.168.77.129:3030';
+// const API_URL = "https://naam-jaap-app-backend.vercel.app"
 
 export const apiCall = async (endpoint, method = 'GET', body = null) => {
-  const { userToken } = useStore.getState();
+  const { userToken } = getStore().getState();
   const headers = {};
   if (body) {
     headers['Content-Type'] = 'application/json';
@@ -33,7 +33,7 @@ export const apiCall = async (endpoint, method = 'GET', body = null) => {
     if (!response.ok) {
       // If the token is invalid or missing, clear the store to force a re-login
       if (response.status === 401 || response.status === 403) {
-        useStore.getState().logout();
+        getStore().getState().logout();
       }
 
       const errorMessage = data.details ? `${data.error}: ${data.details}` : (data.error || 'API Request Failed');
@@ -52,7 +52,7 @@ let syncPromise = null;
 
 // Batch Sync Logic
 export const syncOfflineCounter = async () => {
-  const state = useStore.getState();
+  const state = getStore().getState();
 
   // Prevent concurrent syncs using the global lock
   if (state.isSyncing || syncPromise) return syncPromise;
@@ -60,16 +60,17 @@ export const syncOfflineCounter = async () => {
   syncPromise = (async () => {
     // Wait for the local store to finish rehydrating from AsyncStorage on startup
     let attempts = 0;
-    while (useStore.persist && !useStore.persist.hasHydrated() && attempts < 20) {
+    while (getStore().persist && !getStore().persist.hasHydrated() && attempts < 20) {
       await new Promise(resolve => setTimeout(resolve, 50));
       attempts++;
     }
 
-    const tapsToSync = useStore.getState().unsyncedTaps;
+    const unsynced = getStore().getState().unsyncedTapsByDate || {};
+    const entriesToSync = Object.entries(unsynced).filter(([_, count]) => count > 0);
 
     // Don't sync if nothing to sync. 
     // If the device is offline, the apiCall fetch request will fail and be caught safely in the try-catch block.
-    if (tapsToSync <= 0) {
+    if (entriesToSync.length === 0) {
       syncPromise = null;
       return;
     }
@@ -77,21 +78,22 @@ export const syncOfflineCounter = async () => {
     state.setIsSyncing(true);
 
     try {
-      console.log(`Syncing ${tapsToSync} taps to backend...`);
-      await apiCall('/sync-taps', 'POST', {
-        count: tapsToSync,
-        date: getLocalDateString()
-      });
+      for (const [date, count] of entriesToSync) {
+        console.log(`Syncing ${count} taps for date ${date} to backend...`);
+        await apiCall('/sync-taps', 'POST', {
+          count: count,
+          date: date
+        });
 
-      // ONLY clear taps from local storage after a successful HTTP 200 response
-      useStore.getState().clearUnsynced(tapsToSync);
-      console.log(`Sync successful! Cleared ${tapsToSync} taps from local storage.`);
+        // ONLY clear taps from local storage after a successful HTTP 200 response
+        getStore().getState().clearUnsyncedForDate(date, count);
+        console.log(`Sync successful for ${date}! Cleared ${count} taps.`);
+      }
     } catch (error) {
       console.error("Sync failed error:", error);
       console.log("Sync failed. Taps safely kept in local storage. Will retry automatically.");
-      // Taps were never cleared, so no need to put them back!
     } finally {
-      useStore.getState().setIsSyncing(false);
+      getStore().getState().setIsSyncing(false);
       syncPromise = null;
     }
   })();

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Switch, TouchableOpacity, Alert, ScrollView, Modal, TextInput } from 'react-native';
+import { View, Text, StyleSheet, Switch, TouchableOpacity, Alert, ScrollView, Modal, TextInput, TouchableWithoutFeedback, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useStore } from '../store/useStore';
 import { Ionicons, Feather, MaterialIcons } from '@expo/vector-icons';
 import { requestNotificationPermissions, scheduleDailyReminder, cancelAllReminders } from '../utils/notifications';
@@ -9,6 +10,7 @@ import { getTheme } from '../utils/themes';
 export default function SettingsScreen() {
   const { 
     logout, 
+    resetCount,
     isReminderEnabled, 
     reminderTime, 
     setReminderSettings,
@@ -42,6 +44,75 @@ export default function SettingsScreen() {
   const [tempTime, setTempTime] = useState('');
 
   const [isLanguageModalVisible, setIsLanguageModalVisible] = useState(false);
+
+  const handleLogoutPress = () => {
+    const { unsyncedTaps } = useStore.getState();
+    
+    const performLogout = async () => {
+      await logout();
+    };
+
+    if (unsyncedTaps > 0) {
+      Alert.alert(
+        language === 'hi' ? 'असिंक्रनाइज़्ड गिनती' : language === 'mr' ? 'असिंक्रोनाइझ्ड संख्या' : 'Unsynced Counts',
+        language === 'hi'
+          ? 'आपके पास कुछ ऐसी गिनती है जो अभी तक डेटाबेस में सहेजी नहीं गई है। लॉगआउट करने पर ये मिट जाएंगी। क्या आप अभी भी लॉगआउट करना चाहते हैं?'
+          : language === 'mr'
+          ? 'तुमच्याकडे काही संख्या आहेत ज्या अजून डेटाबेसमध्ये जतन केल्या नाहीत. लॉगआउट केल्यास त्या नष्ट होतील. तुम्हाला अजूनही लॉगआउट करायचे आहे का?'
+          : 'You have unsynced counts. Logging out now will permanently delete them from this device. Do you still want to log out?',
+        [
+          { text: getTranslation(language, 'cancel'), style: 'cancel' },
+          { 
+            text: language === 'hi' ? 'हाँ, लॉगआउट करें' : language === 'mr' ? 'होय, लॉगआउट करा' : 'Yes, Log Out', 
+            style: 'destructive', 
+            onPress: performLogout 
+          }
+        ]
+      );
+    } else {
+      Alert.alert(
+        getTranslation(language, 'logout'),
+        language === 'hi' ? 'क्या आप वाकई लॉगआउट करना चाहते हैं?' : language === 'mr' ? 'तुम्हाला नक्की लॉगआउट करायचे आहे का?' : 'Are you sure you want to log out?',
+        [
+          { text: getTranslation(language, 'cancel'), style: 'cancel' },
+          { 
+            text: getTranslation(language, 'logout'), 
+            style: 'destructive',
+            onPress: performLogout
+          }
+        ]
+      );
+    }
+  };
+
+  const handleResetCount = () => {
+    Alert.alert(
+      language === 'hi' ? 'गिनती रीसेट करें' : language === 'mr' ? 'संख्या रीसेट करा' : 'Reset Count',
+      language === 'hi' 
+        ? 'क्या आप वाकई अपनी कुल जाप संख्या को रीसेट करना चाहते हैं? इसे वापस नहीं लिया जा सकता।' 
+        : language === 'mr' 
+        ? 'तुम्हाला नक्की तुमची एकूण जाप संख्या रीसेट करायची आहे का? हे पूर्ववत केले जाऊ शकत नाही.' 
+        : 'Are you sure you want to reset your total count? This action cannot be undone.',
+      [
+        { text: getTranslation(language, 'cancel'), style: 'cancel' },
+        {
+          text: language === 'hi' ? 'रीसेट करें' : language === 'mr' ? 'रीसेट करा' : 'Reset',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await resetCount();
+              Alert.alert(
+                getTranslation(language, 'success'),
+                language === 'hi' ? 'गिनती सफलतापूर्वक रीसेट कर दी गई है।' : language === 'mr' ? 'संख्या यशस्वीरित्या रीसेट केली आहे.' : 'Count reset successfully.'
+              );
+            } catch (error) {
+              Alert.alert(getTranslation(language, 'error'), error.message);
+            }
+          }
+        }
+      ]
+    );
+  };
 
   const handleToggleReminder = async (enabled) => {
     if (enabled) {
@@ -282,8 +353,22 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* RESET COUNT BUTTON */}
+        <TouchableOpacity 
+          style={[styles.cardRow, { backgroundColor: theme.card, borderColor: theme.border, justifyContent: 'center', paddingVertical: 14, marginBottom: 12 }]} 
+          onPress={handleResetCount}
+        >
+          <Ionicons name="refresh-outline" size={20} color={theme.accent} style={{ marginRight: 8 }} />
+          <Text style={[styles.logoutText, { color: theme.accent }]}>
+            {language === 'hi' ? 'गिनती रीसेट करें' : language === 'mr' ? 'संख्या रीसेट करा' : 'Reset Count'}
+          </Text>
+        </TouchableOpacity>
+
         {/* LOGOUT BUTTON */}
-        <TouchableOpacity style={[styles.cardRow, { backgroundColor: theme.card, borderColor: theme.border, justifyContent: 'center', paddingVertical: 14 }]} onPress={logout}>
+        <TouchableOpacity 
+          style={[styles.cardRow, { backgroundColor: theme.card, borderColor: theme.border, justifyContent: 'center', paddingVertical: 14 }]} 
+          onPress={handleLogoutPress}
+        >
           <Ionicons name="log-out-outline" size={20} color={theme.accent} style={{ marginRight: 8 }} />
           <Text style={[styles.logoutText, { color: theme.accent }]}>
             {getTranslation(language, 'logout')}
@@ -291,149 +376,170 @@ export default function SettingsScreen() {
         </TouchableOpacity>
       </ScrollView>
 
-      {/* Goal Edit Modal */}
       <Modal
         visible={isGoalModalVisible}
         transparent={true}
         animationType="fade"
         onRequestClose={() => setIsGoalModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1 }]}>
-            <Text style={[styles.modalTitle, { color: theme.primaryText }]}>
-              {getGoalTitle(activeGoalKey)}
-            </Text>
-            <TextInput
-              style={[styles.modalInput, { backgroundColor: theme.background, borderColor: theme.border, color: theme.primaryText }]}
-              value={tempGoalText}
-              onChangeText={setTempGoalText}
-              keyboardType="numeric"
-              placeholder={getTranslation(language, 'enterTargetNumber')}
-              placeholderTextColor={theme.secondaryText}
-            />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity style={[styles.modalBtnCancel, { backgroundColor: theme.id === 'darkTemple' ? '#333333' : '#F0F0F0' }]} onPress={() => setIsGoalModalVisible(false)}>
-                <Text style={[styles.modalBtnCancelText, { color: theme.primaryText }]}>
-                  {getTranslation(language, 'cancel')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalBtnSave, { backgroundColor: theme.accent }]} onPress={handleSaveGoal}>
-                <Text style={styles.modalBtnSaveText}>
-                  {getTranslation(language, 'save')}
-                </Text>
-              </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setIsGoalModalVisible(false)}
+        >
+          <TouchableWithoutFeedback>
+            <View style={[styles.modalContent, { backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1 }]}>
+              <Text style={[styles.modalTitle, { color: theme.primaryText }]}>
+                {getGoalTitle(activeGoalKey)}
+              </Text>
+              <TextInput
+                style={[styles.modalInput, { backgroundColor: theme.background, borderColor: theme.border, color: theme.primaryText }]}
+                value={tempGoalText}
+                onChangeText={setTempGoalText}
+                keyboardType="numeric"
+                placeholder={getTranslation(language, 'enterTargetNumber')}
+                placeholderTextColor={theme.secondaryText}
+              />
+              <View style={styles.modalButtons}>
+                <TouchableOpacity style={[styles.modalBtnCancel, { backgroundColor: theme.id === 'darkTemple' ? '#333333' : '#F0F0F0' }]} onPress={() => setIsGoalModalVisible(false)}>
+                  <Text style={[styles.modalBtnCancelText, { color: theme.primaryText }]}>
+                    {getTranslation(language, 'cancel')}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.modalBtnSave, { backgroundColor: theme.accent }]} onPress={handleSaveGoal}>
+                  <Text style={styles.modalBtnSaveText}>
+                    {getTranslation(language, 'save')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        </View>
+          </TouchableWithoutFeedback>
+        </TouchableOpacity>
       </Modal>
 
-      {/* Daily Reminder Edit Modal */}
       <Modal
         visible={isTimeModalVisible}
         transparent={true}
         animationType="fade"
         onRequestClose={() => setIsTimeModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1 }]}>
-            <Text style={[styles.modalTitle, { color: theme.primaryText }]}>
-              {getTranslation(language, 'setReminderTime')}
-            </Text>
-            <Text style={{ color: theme.secondaryText, marginBottom: 16, fontSize: 13 }}>
-              {getTranslation(language, 'enterTimeFormat')}
-            </Text>
-            <TextInput
-              style={[styles.modalInput, { backgroundColor: theme.background, borderColor: theme.border, color: theme.primaryText }]}
-              value={tempTime}
-              onChangeText={setTempTime}
-              keyboardType="numbers-and-punctuation"
-              placeholder="e.g. 08:00"
-              placeholderTextColor={theme.secondaryText}
-              maxLength={5}
-            />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity style={[styles.modalBtnCancel, { backgroundColor: theme.id === 'darkTemple' ? '#333333' : '#F0F0F0' }]} onPress={() => setIsTimeModalVisible(false)}>
-                <Text style={[styles.modalBtnCancelText, { color: theme.primaryText }]}>
-                  {getTranslation(language, 'cancel')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalBtnSave, { backgroundColor: theme.accent }]} onPress={handleSaveTime}>
-                <Text style={styles.modalBtnSaveText}>
-                  {getTranslation(language, 'save')}
-                </Text>
-              </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setIsTimeModalVisible(false)}
+        >
+          <TouchableWithoutFeedback>
+            <View style={[styles.modalContent, { backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1 }]}>
+              <Text style={[styles.modalTitle, { color: theme.primaryText }]}>
+                {getTranslation(language, 'setReminderTime')}
+              </Text>
+              <Text style={{ color: theme.secondaryText, marginBottom: 16, fontSize: 13 }}>
+                {getTranslation(language, 'enterTimeFormat')}
+              </Text>
+              <TextInput
+                style={[styles.modalInput, { backgroundColor: theme.background, borderColor: theme.border, color: theme.primaryText }]}
+                value={tempTime}
+                onChangeText={setTempTime}
+                keyboardType="numbers-and-punctuation"
+                placeholder="e.g. 08:00"
+                placeholderTextColor={theme.secondaryText}
+                maxLength={5}
+              />
+              <View style={styles.modalButtons}>
+                <TouchableOpacity style={[styles.modalBtnCancel, { backgroundColor: theme.id === 'darkTemple' ? '#333333' : '#F0F0F0' }]} onPress={() => setIsTimeModalVisible(false)}>
+                  <Text style={[styles.modalBtnCancelText, { color: theme.primaryText }]}>
+                    {getTranslation(language, 'cancel')}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.modalBtnSave, { backgroundColor: theme.accent }]} onPress={handleSaveTime}>
+                  <Text style={styles.modalBtnSaveText}>
+                    {getTranslation(language, 'save')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        </View>
+          </TouchableWithoutFeedback>
+        </TouchableOpacity>
       </Modal>
 
-      {/* Language Selection Modal */}
       <Modal
         visible={isLanguageModalVisible}
         transparent={true}
         animationType="fade"
         onRequestClose={() => setIsLanguageModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1 }]}>
-            <Text style={[styles.modalTitle, { color: theme.primaryText }]}>
-              {getTranslation(language, 'selectLanguage')}
-            </Text>
-            
-            <TouchableOpacity 
-              style={[
-                styles.langSelectBtn, 
-                { backgroundColor: theme.card, borderColor: theme.border },
-                language === 'en' && { borderColor: theme.accent, backgroundColor: theme.id === 'darkTemple' ? '#111111' : '#FFF2E6' }
-              ]}
-              onPress={() => {
-                setLanguage('en');
-                setIsLanguageModalVisible(false);
-              }}
-            >
-              <Text style={[styles.langSelectText, { color: theme.primaryText }, language === 'en' && { color: theme.accent, fontWeight: 'bold' }]}>English</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[
-                styles.langSelectBtn, 
-                { backgroundColor: theme.card, borderColor: theme.border },
-                language === 'hi' && { borderColor: theme.accent, backgroundColor: theme.id === 'darkTemple' ? '#111111' : '#FFF2E6' }
-              ]}
-              onPress={() => {
-                setLanguage('hi');
-                setIsLanguageModalVisible(false);
-              }}
-            >
-              <Text style={[styles.langSelectText, { color: theme.primaryText }, language === 'hi' && { color: theme.accent, fontWeight: 'bold' }]}>हिन्दी (Hindi)</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[
-                styles.langSelectBtn, 
-                { backgroundColor: theme.card, borderColor: theme.border },
-                language === 'mr' && { borderColor: theme.accent, backgroundColor: theme.id === 'darkTemple' ? '#111111' : '#FFF2E6' }
-              ]}
-              onPress={() => {
-                setLanguage('mr');
-                setIsLanguageModalVisible(false);
-              }}
-            >
-              <Text style={[styles.langSelectText, { color: theme.primaryText }, language === 'mr' && { color: theme.accent, fontWeight: 'bold' }]}>मराठी (Marathi)</Text>
-            </TouchableOpacity>
-
-            <View style={{ height: 16 }} />
-
-            <TouchableOpacity 
-              style={[styles.modalBtnCancel, { backgroundColor: theme.id === 'darkTemple' ? '#333333' : '#F0F0F0', width: '100%' }]} 
-              onPress={() => setIsLanguageModalVisible(false)}
-            >
-              <Text style={[styles.modalBtnCancelText, { color: theme.primaryText }]}>
-                {getTranslation(language, 'cancel')}
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setIsLanguageModalVisible(false)}
+        >
+          <TouchableWithoutFeedback>
+            <View style={[styles.modalContent, { backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1 }]}>
+              <Text style={[styles.modalTitle, { color: theme.primaryText }]}>
+                {getTranslation(language, 'selectLanguage')}
               </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+              
+              <TouchableOpacity 
+                style={[
+                  styles.langSelectBtn, 
+                  { backgroundColor: theme.card, borderColor: theme.border },
+                  language === 'en' && { borderColor: theme.accent, backgroundColor: theme.id === 'darkTemple' ? '#111111' : '#FFF2E6' }
+                ]}
+                onPress={() => {
+                  setLanguage('en');
+                  setIsLanguageModalVisible(false);
+                }}
+              >
+                <Text style={[styles.langSelectText, { color: theme.primaryText }, language === 'en' && { color: theme.accent, fontWeight: 'bold' }]}>English</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[
+                  styles.langSelectBtn, 
+                  { backgroundColor: theme.card, borderColor: theme.border },
+                  language === 'hi' && { borderColor: theme.accent, backgroundColor: theme.id === 'darkTemple' ? '#111111' : '#FFF2E6' }
+                ]}
+                onPress={() => {
+                  setLanguage('hi');
+                  setIsLanguageModalVisible(false);
+                }}
+              >
+                <Text style={[styles.langSelectText, { color: theme.primaryText }, language === 'hi' && { color: theme.accent, fontWeight: 'bold' }]}>हिन्दी (Hindi)</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[
+                  styles.langSelectBtn, 
+                  { backgroundColor: theme.card, borderColor: theme.border },
+                  language === 'mr' && { borderColor: theme.accent, backgroundColor: theme.id === 'darkTemple' ? '#111111' : '#FFF2E6' }
+                ]}
+                onPress={() => {
+                  setLanguage('mr');
+                  setIsLanguageModalVisible(false);
+                }}
+              >
+                <Text style={[styles.langSelectText, { color: theme.primaryText }, language === 'mr' && { color: theme.accent, fontWeight: 'bold' }]}>मराठी (Marathi)</Text>
+              </TouchableOpacity>
+
+              <View style={{ height: 16 }} />
+
+              <TouchableOpacity 
+                style={{
+                  width: '100%',
+                  paddingVertical: 12,
+                  alignItems: 'center',
+                  borderRadius: 16,
+                  backgroundColor: theme.id === 'darkTemple' ? '#333333' : '#F0F0F0'
+                }} 
+                onPress={() => setIsLanguageModalVisible(false)}
+              >
+                <Text style={[styles.modalBtnCancelText, { color: theme.primaryText }]}>
+                  {getTranslation(language, 'close')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableWithoutFeedback>
+        </TouchableOpacity>
       </Modal>
 
     </SafeAreaView>
@@ -446,7 +552,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 24,
-    paddingTop: 40,
+    paddingTop: 12,
     marginBottom: 10,
     marginTop: 10,
   },

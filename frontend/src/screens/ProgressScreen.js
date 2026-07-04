@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Dimensions, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Modal, TouchableWithoutFeedback } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useStore } from '../store/useStore';
 import { LineChart } from 'react-native-chart-kit';
@@ -619,6 +620,16 @@ export default function ProgressScreen() {
                     height={220}
                     yAxisLabel=""
                     yAxisSuffix=""
+                    yLabelsOffset={12}
+                    formatYLabel={(val) => {
+                      const num = parseFloat(val);
+                      if (isNaN(num)) return val;
+                      if (num >= 1e12) return (num / 1e12).toFixed(1).replace(/\.0$/, '') + 'T';
+                      if (num >= 1e9) return (num / 1e9).toFixed(1).replace(/\.0$/, '') + 'B';
+                      if (num >= 1e6) return (num / 1e6).toFixed(1).replace(/\.0$/, '') + 'M';
+                      if (num >= 1e3) return (num / 1e3).toFixed(1).replace(/\.0$/, '') + 'K';
+                      return num.toString();
+                    }}
                     fromZero={true}
                     withInnerLines={false}
                     bezier
@@ -1007,57 +1018,62 @@ export default function ProgressScreen() {
 
       </ScrollView>
 
-      {/* Day Details Modal Popup */}
       <Modal
         visible={isDayModalVisible}
         transparent={true}
         animationType="fade"
         onRequestClose={() => setIsDayModalVisible(false)}
       >
-        <View style={styles.modalBackdrop}>
-          {selectedCalendarDay && (
-            <View style={[styles.modalCard, { backgroundColor: theme.card }]}>
-              <Text style={[styles.modalDateText, { color: theme.accent }]}>
-                {selectedCalendarDay.formattedDate}
-              </Text>
-
-              <View style={[styles.modalStatRow, { borderBottomColor: theme.border, borderBottomWidth: 1 }]}>
-                <Text style={[styles.modalStatLabel, { color: theme.secondaryText }]}>Chants Logged:</Text>
-                <Text style={[styles.modalStatValue, { color: theme.primaryText }]}>
-                  {selectedCalendarDay.count.toLocaleString()}
+        <TouchableOpacity 
+          style={styles.modalBackdrop} 
+          activeOpacity={1} 
+          onPress={() => setIsDayModalVisible(false)}
+        >
+          {selectedCalendarDay ? (
+            <TouchableWithoutFeedback>
+              <View style={[styles.modalCard, { backgroundColor: theme.card }]}>
+                <Text style={[styles.modalDateText, { color: theme.accent }]}>
+                  {selectedCalendarDay.formattedDate}
                 </Text>
-              </View>
 
-              <View style={[styles.modalStatRow, { borderBottomColor: theme.border, borderBottomWidth: 1 }]}>
-                <Text style={[styles.modalStatLabel, { color: theme.secondaryText }]}>Malas Completed:</Text>
-                <Text style={[styles.modalStatValue, { color: theme.primaryText }]}>
-                  {selectedCalendarDay.malas}
-                </Text>
-              </View>
+                <View style={[styles.modalStatRow, { borderBottomColor: theme.border, borderBottomWidth: 1 }]}>
+                  <Text style={[styles.modalStatLabel, { color: theme.secondaryText }]}>Chants Logged:</Text>
+                  <Text style={[styles.modalStatValue, { color: theme.primaryText }]}>
+                    {selectedCalendarDay.count.toLocaleString()}
+                  </Text>
+                </View>
 
-              <View style={[styles.modalStatRow, { borderBottomColor: theme.border, borderBottomWidth: 1 }]}>
-                <Text style={[styles.modalStatLabel, { color: theme.secondaryText }]}>Streak on Day:</Text>
-                <Text style={[styles.modalStatValue, { color: theme.primaryText }]}>
-                  {selectedCalendarDay.streak} days
-                </Text>
-              </View>
+                <View style={[styles.modalStatRow, { borderBottomColor: theme.border, borderBottomWidth: 1 }]}>
+                  <Text style={[styles.modalStatLabel, { color: theme.secondaryText }]}>Malas Completed:</Text>
+                  <Text style={[styles.modalStatValue, { color: theme.primaryText }]}>
+                    {selectedCalendarDay.malas}
+                  </Text>
+                </View>
 
-              <View style={[styles.modalStatRow, { borderBottomColor: theme.border, borderBottomWidth: 1 }]}>
-                <Text style={[styles.modalStatLabel, { color: theme.secondaryText }]}>Daily Goal Status:</Text>
-                <Text style={[styles.modalStatValue, { color: selectedCalendarDay.isGoalMet ? theme.success : theme.accent, fontWeight: 'bold' }]}>
-                  {selectedCalendarDay.isGoalMet ? 'Goal Met ✅' : 'Pending ⏳'}
-                </Text>
-              </View>
+                <View style={[styles.modalStatRow, { borderBottomColor: theme.border, borderBottomWidth: 1 }]}>
+                  <Text style={[styles.modalStatLabel, { color: theme.secondaryText }]}>Streak on Day:</Text>
+                  <Text style={[styles.modalStatValue, { color: theme.primaryText }]}>
+                    {selectedCalendarDay.streak} days
+                  </Text>
+                </View>
 
-              <TouchableOpacity
-                style={[styles.modalCloseBtn, { backgroundColor: theme.accent }]}
-                onPress={() => setIsDayModalVisible(false)}
-              >
-                <Text style={styles.modalCloseBtnText}>Close</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
+                <View style={[styles.modalStatRow, { borderBottomColor: theme.border, borderBottomWidth: 1 }]}>
+                  <Text style={[styles.modalStatLabel, { color: theme.secondaryText }]}>Daily Goal Status:</Text>
+                  <Text style={[styles.modalStatValue, { color: selectedCalendarDay.isGoalMet ? theme.success : theme.accent, fontWeight: 'bold' }]}>
+                    {selectedCalendarDay.isGoalMet ? 'Goal Met ✅' : 'Pending ⏳'}
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.modalCloseBtn, { backgroundColor: theme.accent }]}
+                  onPress={() => setIsDayModalVisible(false)}
+                >
+                  <Text style={styles.modalCloseBtnText}>Close</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableWithoutFeedback>
+          ) : null}
+        </TouchableOpacity>
       </Modal>
     </SafeAreaView>
   );
@@ -1073,7 +1089,7 @@ const styles = StyleSheet.create({
     paddingBottom: 120,
   },
   header: {
-    paddingTop: 40,
+    paddingTop: 12,
     marginBottom: 20,
     marginTop: 10,
     paddingHorizontal: 16,
