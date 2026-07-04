@@ -4,8 +4,8 @@ import { getLocalDateString } from '../utils/date.js';
 // Set your computer's local IP Address below if testing on physical device on the same Wifi
 // Use 'http://10.0.2.2:3030' for standard Android Emulator
 // Set your computer's local IP Address below if testing on physical device on the same Wifi
-const API_URL = 'http://192.168.77.129:3030';
-// const API_URL = "https://naam-jaap-app-backend.vercel.app"
+// const API_URL = 'http://192.168.77.129:3030';
+const API_URL = "https://naam-jaap-app-backend.vercel.app"
 
 export const apiCall = async (endpoint, method = 'GET', body = null) => {
   const { userToken } = getStore().getState();
