@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
 import { useStore } from '../store/useStore';
 import { apiCall } from '../api/client';
 import { getTranslation } from '../utils/translations';
@@ -63,74 +63,83 @@ export default function AuthScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <Text style={[styles.title, { color: theme.accent }]}>
-        {getTranslation(language, 'appName')}
-      </Text>
-      <Text style={[styles.subtitle, { color: theme.secondaryText }]}>
-        {getTranslation(language, 'beginJourney')}
-      </Text>
-
-      <Text style={[styles.label, { color: theme.secondaryText }]}>
-        {getTranslation(language, 'emailAddress')}
-      </Text>
-      <TextInput
-        style={[styles.input, { backgroundColor: theme.card, borderColor: theme.border, color: theme.primaryText }]}
-        placeholder={getTranslation(language, 'enterEmail')}
-        placeholderTextColor={theme.secondaryText}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        value={email}
-        onChangeText={setEmail}
-        editable={!isOtpSent}
-      />
-
-      {isOtpSent && (
-        <>
-          <Text style={[styles.label, { color: theme.secondaryText }]}>
-            {getTranslation(language, 'otp')}
-          </Text>
-          <TextInput
-            style={[styles.input, { backgroundColor: theme.card, borderColor: theme.border, color: theme.primaryText }]}
-            placeholder={getTranslation(language, 'enterOtp')}
-            placeholderTextColor={theme.secondaryText}
-            keyboardType="number-pad"
-            value={otp}
-            onChangeText={setOtp}
-            maxLength={6}
-          />
-          {otpTimer > 0 ? (
-            <Text style={{ textAlign: 'center', color: theme.secondaryText, marginBottom: 24, fontSize: 14 }}>
-              {language === 'hi' ? `ओटीपी ${formatOtpTime(otpTimer)} में समाप्त होगा` : language === 'mr' ? `ओटीपी ${formatOtpTime(otpTimer)} मध्ये कालबाह्य होईल` : `OTP expires in ${formatOtpTime(otpTimer)}`}
-            </Text>
-          ) : (
-            <TouchableOpacity 
-              style={[styles.button, { backgroundColor: theme.card, borderColor: theme.accent, borderWidth: 1.5, marginBottom: 24 }]} 
-              onPress={handleSendOtp}
-              disabled={loading}
-            >
-              <Text style={[styles.buttonText, { color: theme.accent }]}>
-                {language === 'hi' ? 'ओटीपी पुनः भेजें' : language === 'mr' ? 'ओटीपी पुन्हा पाठवा' : 'Resend OTP'}
-              </Text>
-            </TouchableOpacity>
-          )}
-        </>
-      )}
-
-      <TouchableOpacity 
-        style={[styles.button, { backgroundColor: theme.accent }]} 
-        onPress={isOtpSent ? handleVerifyOtp : handleSendOtp}
-        disabled={loading}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={{ flex: 1, backgroundColor: theme.background }}
+    >
+      <ScrollView
+        contentContainerStyle={[styles.scrollContainer, { backgroundColor: theme.background }]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        {loading ? (
-          <ActivityIndicator color="#FFFFFF" />
-        ) : (
-          <Text style={styles.buttonText}>
-            {isOtpSent ? getTranslation(language, 'verifyLogin') : getTranslation(language, 'sendOtp')}
-          </Text>
+        <Text style={[styles.title, { color: theme.accent }]}>
+          {getTranslation(language, 'appName')}
+        </Text>
+        <Text style={[styles.subtitle, { color: theme.secondaryText }]}>
+          {getTranslation(language, 'beginJourney')}
+        </Text>
+
+        <Text style={[styles.label, { color: theme.secondaryText }]}>
+          {getTranslation(language, 'emailAddress')}
+        </Text>
+        <TextInput
+          style={[styles.input, { backgroundColor: theme.card, borderColor: theme.border, color: theme.primaryText }]}
+          placeholder={getTranslation(language, 'enterEmail')}
+          placeholderTextColor={theme.secondaryText}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          value={email}
+          onChangeText={setEmail}
+          editable={!isOtpSent}
+        />
+
+        {isOtpSent && (
+          <>
+            <Text style={[styles.label, { color: theme.secondaryText }]}>
+              {getTranslation(language, 'otp')}
+            </Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: theme.card, borderColor: theme.border, color: theme.primaryText }]}
+              placeholder={getTranslation(language, 'enterOtp')}
+              placeholderTextColor={theme.secondaryText}
+              keyboardType="number-pad"
+              value={otp}
+              onChangeText={setOtp}
+              maxLength={6}
+            />
+            {otpTimer > 0 ? (
+              <Text style={{ textAlign: 'center', color: theme.secondaryText, marginBottom: 24, fontSize: 14 }}>
+                {language === 'hi' ? `ओटीपी ${formatOtpTime(otpTimer)} में समाप्त होगा` : language === 'mr' ? `ओटीपी ${formatOtpTime(otpTimer)} मध्ये कालबाह्य होईल` : `OTP expires in ${formatOtpTime(otpTimer)}`}
+              </Text>
+            ) : (
+              <TouchableOpacity 
+                style={[styles.button, { backgroundColor: theme.card, borderColor: theme.accent, borderWidth: 1.5, marginBottom: 24 }]} 
+                onPress={handleSendOtp}
+                disabled={loading}
+              >
+                <Text style={[styles.buttonText, { color: theme.accent }]}>
+                  {language === 'hi' ? 'ओटीपी पुनः भेजें' : language === 'mr' ? 'ओटीपी पुन्हा पाठवा' : 'Resend OTP'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </>
         )}
-      </TouchableOpacity>
-    </View>
+
+        <TouchableOpacity 
+          style={[styles.button, { backgroundColor: theme.accent }]} 
+          onPress={isOtpSent ? handleVerifyOtp : handleSendOtp}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.buttonText}>
+              {isOtpSent ? getTranslation(language, 'verifyLogin') : getTranslation(language, 'sendOtp')}
+            </Text>
+          )}
+        </TouchableOpacity>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -138,6 +147,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFDF9', // Beautiful off-white peach
+    padding: 24,
+    justifyContent: 'center',
+  },
+  scrollContainer: {
+    flexGrow: 1,
     padding: 24,
     justifyContent: 'center',
   },

@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Modal, TouchableWithoutFeedback } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -45,6 +45,7 @@ function getStreakOnDay(dateStr, grouped) {
 export default function ProgressScreen() {
   const { historyRecords, todayCount, dailyGoal, themeId, language, goals } = useStore();
   const theme = getTheme(themeId);
+  const scrollViewRef = useRef(null);
 
   const fallbackGoals = useMemo(() => {
     const d = goals?.daily || dailyGoal || 108;
@@ -222,7 +223,8 @@ export default function ProgressScreen() {
     today.setHours(0, 0, 0, 0); // Normalize to midnight
 
     // Start date is exactly 364 days ago
-    const startDate = new Date(today.getTime() - 364 * 86400000);
+    const startDate = new Date(today);
+    startDate.setDate(today.getDate() - 364);
 
     // Shift start date back to the nearest Monday to align rows nicely
     const day = startDate.getDay();
@@ -231,7 +233,8 @@ export default function ProgressScreen() {
 
     const totalDays = 52 * 7;
     for (let i = 0; i < totalDays; i++) {
-      const d = new Date(startDate.getTime() + i * 86400000);
+      const d = new Date(startDate);
+      d.setDate(startDate.getDate() + i);
       const dateStr = getLocalDateString(d);
       const count = groupedByDate[dateStr] || 0;
       data.push({
@@ -335,7 +338,7 @@ export default function ProgressScreen() {
   }, [todayCount, weeklyTotal, monthlyTotal, yearlyTotal, fallbackGoals, language]);
 
   // Chart data calculations
-  const { labels, dataPoints, dateRangeText, totalCount, dailyAverage, highestDaily, listItems } = useMemo(() => {
+  const { labels, dataPoints, dateRangeText, totalCount, dailyAverage, highestDaily, listItems, fullDateLabels } = useMemo(() => {
     const locale = language === 'hi' ? 'hi-IN' : language === 'mr' ? 'mr-IN' : 'en-US';
     let chartLabels = [];
     let chartData = [];
@@ -344,6 +347,7 @@ export default function ProgressScreen() {
     let avg = 0;
     let maxDay = 0;
     let listItems = [];
+    let fullDateLabels = [];
 
     const today = new Date();
 
@@ -363,6 +367,7 @@ export default function ProgressScreen() {
         chartLabels.push(d.toLocaleDateString(locale, { weekday: 'short' }));
         chartData.push(count);
         total += count;
+        fullDateLabels.push(d.toLocaleDateString(locale, { weekday: 'short', day: 'numeric' }));
       }
 
       for (let i = 0; i < 7; i++) {
@@ -400,6 +405,7 @@ export default function ProgressScreen() {
         } else {
           chartLabels.push("");
         }
+        fullDateLabels.push(d.toLocaleDateString(locale, { weekday: 'short', day: 'numeric' }));
       }
 
       for (let day = daysInMonth; day >= 1; day--) {
@@ -427,6 +433,7 @@ export default function ProgressScreen() {
       for (let y = startYear; y <= startYear + 2; y++) {
         chartLabels.push(y.toString());
         chartData.push(0);
+        fullDateLabels.push(y.toString());
       }
 
       dText = `${startYear} - ${startYear + 2}`;
@@ -469,18 +476,30 @@ export default function ProgressScreen() {
       totalCount: total,
       dailyAverage: avg,
       highestDaily: maxDay,
-      listItems
+      listItems,
+      fullDateLabels
     };
   }, [groupedByDate, timeRange, offset, dailyGoal, language]);
 
-  const activeIdx = selectedIdx !== null && selectedIdx < dataPoints.length ? selectedIdx : dataPoints.length - 1;
+  const activeIdx = useMemo(() => {
+    if (selectedIdx !== null && selectedIdx < dataPoints.length) {
+      return selectedIdx;
+    }
+    if (timeRange === 'monthly') {
+      if (offset === 0) {
+        const today = new Date();
+        return Math.min(today.getDate() - 1, dataPoints.length - 1);
+      } else {
+        return 0;
+      }
+    }
+    return dataPoints.length - 1;
+  }, [selectedIdx, dataPoints.length, timeRange, offset]);
+
   const selectedCount = dataPoints[activeIdx] || 0;
 
   const getSelectedLabel = (idx) => {
-    if (timeRange === 'monthly') {
-      return `Day ${idx + 1}`;
-    }
-    return labels[idx] || '';
+    return fullDateLabels[idx] || '';
   };
 
   const handleDayPress = (dayData) => {
@@ -521,7 +540,7 @@ export default function ProgressScreen() {
           >
             <Ionicons name="calendar" size={16} color={activeView === 'calendar' ? theme.accent : theme.secondaryText} style={{ marginRight: 6 }} />
             <Text style={[styles.viewSegmentText, { color: activeView === 'calendar' ? theme.primaryText : theme.secondaryText }, activeView === 'calendar' && { fontWeight: 'bold' }]}>
-              {language === 'hi' ? 'जाप कैलेंडर' : 'Heatmap'}
+              {language === 'hi' ? 'जाप कैलेंडर' : language === 'mr' ? 'जाप कॅलेंडर' : 'Heatmap'}
             </Text>
           </TouchableOpacity>
 
@@ -702,7 +721,7 @@ export default function ProgressScreen() {
             {/* Premium Multi-Goal System Cards */}
             <View style={styles.dashboardSection}>
               <Text style={[styles.sectionHeading, { color: theme.primaryText }]}>
-                {language === 'hi' ? 'भक्ति लक्ष्य प्रगति' : 'Goal Target Dashboard'}
+                {getTranslation(language, 'goalTargetDashboard')}
               </Text>
               {goalsSummary
                 .filter(item => item.key === timeRange)
@@ -712,7 +731,7 @@ export default function ProgressScreen() {
                       <Text style={[styles.goalCardTitle, { color: theme.primaryText }]}>{item.title}</Text>
                       <View style={[styles.goalCardBadge, { backgroundColor: item.isMet ? (theme.id === 'darkTemple' ? '#252525' : '#E8F5E9') : (theme.id === 'darkTemple' ? '#222' : '#FFF2E6') }]}>
                         <Text style={[styles.goalCardBadgeText, { color: item.isMet ? theme.success : theme.accent }]}>
-                          {item.isMet ? 'Goal Met ✓' : 'In Progress'}
+                          {item.isMet ? getTranslation(language, 'goalMet') + ' ✓' : getTranslation(language, 'inProgress')}
                         </Text>
                       </View>
                     </View>
@@ -730,11 +749,11 @@ export default function ProgressScreen() {
 
                     {!item.isMet ? (
                       <Text style={[styles.remainingText, { color: theme.secondaryText }]}>
-                        ⚠️ {item.remaining.toLocaleString()} {getTranslation(language, 'counts')} remaining to complete.
+                        ⚠️ {getTranslation(language, 'remainingToComplete', { remaining: item.remaining.toLocaleString() })}
                       </Text>
                     ) : (
                       <Text style={[styles.remainingText, { color: theme.success, fontWeight: 'bold' }]}>
-                        🎉 target met successfully! Keep up the regular devotion.
+                        {getTranslation(language, 'targetMetMsg')}
                       </Text>
                     )}
                   </View>
@@ -744,7 +763,7 @@ export default function ProgressScreen() {
             {/* Detailed Statistics Section */}
             <View style={styles.dashboardSection}>
               <Text style={[styles.sectionHeading, { color: theme.primaryText }]}>
-                {language === 'hi' ? 'आध्यात्मिक सांख्यिकी' : 'Spiritual Journey Statistics'}
+                {getTranslation(language, 'spiritualJourneyStats')}
               </Text>
 
               <View style={styles.statsCardGrid}>
@@ -754,40 +773,40 @@ export default function ProgressScreen() {
                 </View>
                 <View style={[styles.statsGridItem, { backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1 }]}>
                   <Text style={[styles.gridItemVal, { color: theme.accent }]}>{stats.longestStreak} 🏆</Text>
-                  <Text style={[styles.gridItemLabel, { color: theme.secondaryText }]}>Longest Streak</Text>
+                  <Text style={[styles.gridItemLabel, { color: theme.secondaryText }]}>{getTranslation(language, 'longestStreak')}</Text>
                 </View>
               </View>
 
               <View style={styles.statsCardGrid}>
                 <View style={[styles.statsGridItem, { backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1 }]}>
                   <Text style={[styles.gridItemVal, { color: theme.accent }]}>{stats.bestDayCount} 🌸</Text>
-                  <Text style={[styles.gridItemLabel, { color: theme.secondaryText }]}>Best Day ({stats.bestDayFormatted})</Text>
+                  <Text style={[styles.gridItemLabel, { color: theme.secondaryText }]}>{getTranslation(language, 'bestDay')} ({stats.bestDayFormatted})</Text>
                 </View>
                 <View style={[styles.statsGridItem, { backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1 }]}>
                   <Text style={[styles.gridItemVal, { color: theme.accent }]}>{stats.totalSessions} 📅</Text>
-                  <Text style={[styles.gridItemLabel, { color: theme.secondaryText }]}>Active Days</Text>
+                  <Text style={[styles.gridItemLabel, { color: theme.secondaryText }]}>{getTranslation(language, 'activeDays')}</Text>
                 </View>
               </View>
 
               <View style={styles.statsCardGrid}>
                 <View style={[styles.statsGridItem, { backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1 }]}>
                   <Text style={[styles.gridItemVal, { color: theme.accent }]}>{stats.avgDay}</Text>
-                  <Text style={[styles.gridItemLabel, { color: theme.secondaryText }]}>Avg Daily Chants</Text>
+                  <Text style={[styles.gridItemLabel, { color: theme.secondaryText }]}>{getTranslation(language, 'avgDailyChants')}</Text>
                 </View>
                 <View style={[styles.statsGridItem, { backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1 }]}>
                   <Text style={[styles.gridItemVal, { color: theme.accent }]}>{stats.avgWeek}</Text>
-                  <Text style={[styles.gridItemLabel, { color: theme.secondaryText }]}>Avg Weekly Chants</Text>
+                  <Text style={[styles.gridItemLabel, { color: theme.secondaryText }]}>{getTranslation(language, 'avgWeeklyChants')}</Text>
                 </View>
               </View>
 
               <View style={styles.statsCardGrid}>
                 <View style={[styles.statsGridItem, { backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1 }]}>
                   <Text style={[styles.gridItemVal, { color: theme.accent }]}>{stats.avgMonth}</Text>
-                  <Text style={[styles.gridItemLabel, { color: theme.secondaryText }]}>Avg Monthly Chants</Text>
+                  <Text style={[styles.gridItemLabel, { color: theme.secondaryText }]}>{getTranslation(language, 'avgMonthlyChants')}</Text>
                 </View>
                 <View style={[styles.statsGridItem, { backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1 }]}>
                   <Text style={[styles.gridItemVal, { color: theme.accent }]}>{stats.totalMalas} 📿</Text>
-                  <Text style={[styles.gridItemLabel, { color: theme.secondaryText }]}>Lifetime Malas Completed</Text>
+                  <Text style={[styles.gridItemLabel, { color: theme.secondaryText }]}>{getTranslation(language, 'lifetimeMalas')}</Text>
                 </View>
               </View>
             </View>
@@ -799,7 +818,7 @@ export default function ProgressScreen() {
             {/* 1. Monthly Heatmap Card */}
             <View style={[styles.gridContainerCard, { backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1, marginBottom: 20 }]}>
               <Text style={[styles.sectionHeading, { color: theme.primaryText }]}>
-                {language === 'hi' ? 'मासिक भक्ति रिकॉर्ड' : 'Monthly Devotion Heatmap'}
+                {language === 'hi' ? 'मासिक भक्ति रिकॉर्ड' : language === 'mr' ? 'मासिक भक्ति रेकॉर्ड' : 'Monthly Devotion Heatmap'}
               </Text>
 
               {/* Date Navigation */}
@@ -887,14 +906,24 @@ export default function ProgressScreen() {
               <Text style={{ fontSize: 13, color: theme.secondaryText, marginBottom: 4 }}>
                 {language === 'hi'
                   ? `पिछले वर्ष में ${totalChantsLastYear.toLocaleString()} जाप`
+                  : language === 'mr'
+                  ? `मागील वर्षात ${totalChantsLastYear.toLocaleString()} जाप`
                   : `${totalChantsLastYear.toLocaleString()} chants in the last year`}
               </Text>
 
               <Text style={[styles.sectionHeading, { color: theme.primaryText, marginBottom: 12 }]}>
-                {language === 'hi' ? 'वार्षिक भक्ति रिकॉर्ड' : 'Spiritual Heatmap'}
+                {language === 'hi' ? 'वार्षिक भक्ति रिकॉर्ड' : language === 'mr' ? 'वार्षिक भक्ति रेकॉर्ड' : 'Spiritual Heatmap'}
               </Text>
 
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 10 }}>
+              <ScrollView 
+                ref={scrollViewRef}
+                horizontal 
+                showsHorizontalScrollIndicator={false} 
+                onContentSizeChange={() => {
+                  scrollViewRef.current?.scrollToEnd({ animated: false });
+                }}
+                contentContainerStyle={{ paddingVertical: 10 }}
+              >
                 <View style={{ flexDirection: 'column' }}>
                   {/* Month Labels Row */}
                   <View style={{ flexDirection: 'row', marginLeft: 30, marginBottom: 6, height: 16 }}>
@@ -1037,30 +1066,30 @@ export default function ProgressScreen() {
                 </Text>
 
                 <View style={[styles.modalStatRow, { borderBottomColor: theme.border, borderBottomWidth: 1 }]}>
-                  <Text style={[styles.modalStatLabel, { color: theme.secondaryText }]}>Chants Logged:</Text>
+                  <Text style={[styles.modalStatLabel, { color: theme.secondaryText }]}>{getTranslation(language, 'totalCount')}:</Text>
                   <Text style={[styles.modalStatValue, { color: theme.primaryText }]}>
                     {selectedCalendarDay.count.toLocaleString()}
                   </Text>
                 </View>
 
                 <View style={[styles.modalStatRow, { borderBottomColor: theme.border, borderBottomWidth: 1 }]}>
-                  <Text style={[styles.modalStatLabel, { color: theme.secondaryText }]}>Malas Completed:</Text>
+                  <Text style={[styles.modalStatLabel, { color: theme.secondaryText }]}>{getTranslation(language, 'lifetimeMalas')}:</Text>
                   <Text style={[styles.modalStatValue, { color: theme.primaryText }]}>
                     {selectedCalendarDay.malas}
                   </Text>
                 </View>
 
                 <View style={[styles.modalStatRow, { borderBottomColor: theme.border, borderBottomWidth: 1 }]}>
-                  <Text style={[styles.modalStatLabel, { color: theme.secondaryText }]}>Streak on Day:</Text>
+                  <Text style={[styles.modalStatLabel, { color: theme.secondaryText }]}>{getTranslation(language, 'currentStreak')}:</Text>
                   <Text style={[styles.modalStatValue, { color: theme.primaryText }]}>
-                    {selectedCalendarDay.streak} days
+                    {selectedCalendarDay.streak} {getTranslation(language, 'days')}
                   </Text>
                 </View>
 
                 <View style={[styles.modalStatRow, { borderBottomColor: theme.border, borderBottomWidth: 1 }]}>
-                  <Text style={[styles.modalStatLabel, { color: theme.secondaryText }]}>Daily Goal Status:</Text>
+                  <Text style={[styles.modalStatLabel, { color: theme.secondaryText }]}>{getTranslation(language, 'dailyGoal')}:</Text>
                   <Text style={[styles.modalStatValue, { color: selectedCalendarDay.isGoalMet ? theme.success : theme.accent, fontWeight: 'bold' }]}>
-                    {selectedCalendarDay.isGoalMet ? 'Goal Met ✅' : 'Pending ⏳'}
+                    {selectedCalendarDay.isGoalMet ? `${getTranslation(language, 'goalMet')} ✅` : `${language === 'hi' ? 'लंबित' : language === 'mr' ? 'प्रलंबित' : 'Pending'} ⏳`}
                   </Text>
                 </View>
 
@@ -1068,7 +1097,7 @@ export default function ProgressScreen() {
                   style={[styles.modalCloseBtn, { backgroundColor: theme.accent }]}
                   onPress={() => setIsDayModalVisible(false)}
                 >
-                  <Text style={styles.modalCloseBtnText}>Close</Text>
+                  <Text style={styles.modalCloseBtnText}>{getTranslation(language, 'close')}</Text>
                 </TouchableOpacity>
               </View>
             </TouchableWithoutFeedback>

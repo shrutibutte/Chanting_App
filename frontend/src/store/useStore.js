@@ -279,6 +279,10 @@ export const useStore = create(
       isBlackoutMode: false,
       setIsBlackoutMode: (status) => set({ isBlackoutMode: status }),
 
+      // Hide Naam global state
+      isNaamHidden: false,
+      setIsNaamHidden: (status) => set({ isNaamHidden: status }),
+
       // Journey Levels
       lastUnlockedLevel: 0,
       showLevelModal: false,
@@ -315,6 +319,7 @@ export const useStore = create(
           lastStreakMaintainedPopupDate: null,
           customNaams: [],
           isBlackoutMode: false,
+          isNaamHidden: false,
           themeId: 'peach',
           isDarkMode: false,
           goals: {
@@ -391,30 +396,43 @@ export const useStore = create(
         }
       },
       // Manual logging logic
-      addManualCount: (countToAdd) => {
+      addManualCount: (countToAdd, targetDateStr) => {
         if (countToAdd <= 0) return;
         const currentDate = getLocalDateString();
-        const todayDateObj = new Date();
-        const currentWeekKey = getWeekKey(todayDateObj);
-        const currentMonthKey = getMonthKey(todayDateObj);
-        const currentYearKey = getYearKey(todayDateObj);
+        const activeDateStr = targetDateStr || currentDate;
+        
+        const parts = activeDateStr.split('-');
+        const targetDateObj = new Date(parts[0], parts[1] - 1, parts[2]);
+        const targetWeekKey = getWeekKey(targetDateObj);
+        const targetMonthKey = getMonthKey(targetDateObj);
+        const targetYearKey = getYearKey(targetDateObj);
 
         set((state) => {
-          const isNewDay = state.lastSyncDate !== currentDate;
           let nextHistoryRecords = [...state.historyRecords];
+          let nextTodayCount = state.todayCount;
 
-          if (isNewDay && state.lastSyncDate && state.todayCount > 0) {
-            const yesterdayDate = state.lastSyncDate;
-            const yesterdayCount = state.todayCount;
-            const existingIdx = nextHistoryRecords.findIndex(r => r.date === yesterdayDate);
+          if (activeDateStr === currentDate) {
+            const isNewDay = state.lastSyncDate !== currentDate;
+            if (isNewDay && state.lastSyncDate && state.todayCount > 0) {
+              const yesterdayDate = state.lastSyncDate;
+              const yesterdayCount = state.todayCount;
+              const existingIdx = nextHistoryRecords.findIndex(r => r.date === yesterdayDate);
+              if (existingIdx !== -1) {
+                nextHistoryRecords[existingIdx].count = Math.max(nextHistoryRecords[existingIdx].count, yesterdayCount);
+              } else {
+                nextHistoryRecords.push({ date: yesterdayDate, count: yesterdayCount });
+              }
+            }
+            nextTodayCount = isNewDay ? countToAdd : state.todayCount + countToAdd;
+          } else {
+            const existingIdx = nextHistoryRecords.findIndex(r => r.date === activeDateStr);
             if (existingIdx !== -1) {
-              nextHistoryRecords[existingIdx].count = Math.max(nextHistoryRecords[existingIdx].count, yesterdayCount);
+              nextHistoryRecords[existingIdx].count += countToAdd;
             } else {
-              nextHistoryRecords.push({ date: yesterdayDate, count: yesterdayCount });
+              nextHistoryRecords.push({ date: activeDateStr, count: countToAdd });
             }
           }
 
-          const nextTodayCount = isNewDay ? countToAdd : state.todayCount + countToAdd;
           const nextTotalCount = state.totalCount + countToAdd;
 
           // Check all multi-goals
@@ -429,23 +447,23 @@ export const useStore = create(
               celebrationType: 'daily',
               lastCelebrationDate: currentDate
             };
-          } else if (weeklyTotal >= state.goals.weekly && state.lastWeeklyGoalCelebrated !== currentWeekKey) {
+          } else if (weeklyTotal >= state.goals.weekly && state.lastWeeklyGoalCelebrated !== targetWeekKey) {
             celebrationUpdates = {
               showCelebrationModal: true,
               celebrationType: 'weekly',
-              lastWeeklyGoalCelebrated: currentWeekKey
+              lastWeeklyGoalCelebrated: targetWeekKey
             };
-          } else if (monthlyTotal >= state.goals.monthly && state.lastMonthlyGoalCelebrated !== currentMonthKey) {
+          } else if (monthlyTotal >= state.goals.monthly && state.lastMonthlyGoalCelebrated !== targetMonthKey) {
             celebrationUpdates = {
               showCelebrationModal: true,
               celebrationType: 'monthly',
-              lastMonthlyGoalCelebrated: currentMonthKey
+              lastMonthlyGoalCelebrated: targetMonthKey
             };
-          } else if (yearlyTotal >= state.goals.yearly && state.lastYearlyGoalCelebrated !== currentYearKey) {
+          } else if (yearlyTotal >= state.goals.yearly && state.lastYearlyGoalCelebrated !== targetYearKey) {
             celebrationUpdates = {
               showCelebrationModal: true,
               celebrationType: 'yearly',
-              lastYearlyGoalCelebrated: currentYearKey
+              lastYearlyGoalCelebrated: targetYearKey
             };
           }
 
@@ -467,7 +485,7 @@ export const useStore = create(
           updateWidget(nextTodayCount, state.goals.daily, streak);
 
           const nextUnsynced = { ...state.unsyncedTapsByDate };
-          nextUnsynced[currentDate] = (nextUnsynced[currentDate] || 0) + countToAdd;
+          nextUnsynced[activeDateStr] = (nextUnsynced[activeDateStr] || 0) + countToAdd;
 
           return {
             totalCount: nextTotalCount,

@@ -10,6 +10,7 @@ import NetInfo from '@react-native-community/netinfo';
 import { getLocalDateString } from '../utils/date.js';
 import { getTranslation } from '../utils/translations';
 import { getTheme, THEMES } from '../utils/themes';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const GODS_LIST = [
   { id: '1', name: 'राधा' },
@@ -34,17 +35,18 @@ const GODS_LIST = [
 ]
 
 export default function DashboardScreen({ onStartChanting, onPressStreak }) {
-  const { userToken, currentNaam, totalCount, todayCount, sessionCount, logout, dailyGoal, setStats, setNaam, incrementTap, addManualCount, lastUnlockedLevel, showLevelModal, unlockedLevelInfo, setShowLevelModal, isDarkMode, language, customNaams, fetchCustomNaams, addCustomNaam, isBlackoutMode, setIsBlackoutMode, themeId, goals } = useStore();
+  const { userToken, currentNaam, totalCount, todayCount, sessionCount, logout, dailyGoal, setStats, setNaam, incrementTap, addManualCount, lastUnlockedLevel, showLevelModal, unlockedLevelInfo, setShowLevelModal, isDarkMode, language, customNaams, fetchCustomNaams, addCustomNaam, isBlackoutMode, setIsBlackoutMode, themeId, goals, isNaamHidden, setIsNaamHidden } = useStore();
   const theme = getTheme(themeId);
   const [loading, setLoading] = useState(false);
   const [synced, setSynced] = useState(true);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isChanting, setIsChanting] = useState(false); // Placeholder or unused local sync
   const [isMenuVisible, setIsMenuVisible] = useState(false);
-  const [isNaamHidden, setIsNaamHidden] = useState(false);
   const [isTimerModalVisible, setIsTimerModalVisible] = useState(false);
   const [isLogMalaModalVisible, setIsLogMalaModalVisible] = useState(false);
   const [customCountInput, setCustomCountInput] = useState('');
+  const [logDate, setLogDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   // Custom Naam input modal states
   const [isAddCustomModalVisible, setIsAddCustomModalVisible] = useState(false);
@@ -178,7 +180,7 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
     return () => unsubscribe();
   }, []);
 
-  const currentMalaProgress = todayCount === 0 ? 0 : (todayCount % 108 === 0 ? 108 : todayCount % 108);
+  const currentMalaProgress = todayCount % 108;
   const percentage = Math.floor((currentMalaProgress / 108) * 100);
   const displayTotalMalas = Math.floor(todayCount / 108);
 
@@ -601,95 +603,109 @@ export default function DashboardScreen({ onStartChanting, onPressStreak }) {
             onPress={() => setIsLogMalaModalVisible(false)}
           >
             <TouchableWithoutFeedback>
-              <View style={[styles.modalContent, isDarkMode && styles.darkModalContent, { height: '55%' }]}>
+              <View style={[styles.modalContent, isDarkMode && styles.darkModalContent, { height: Platform.OS === 'ios' ? '34%' : '38%' }]}>
                 <View style={styles.modalHeader}>
-                  <Text style={[styles.modalTitle, isDarkMode && styles.darkModalTitle]}>{getTranslation(language, 'addLogCount')}</Text>
-                  <TouchableOpacity onPress={() => setIsLogMalaModalVisible(false)}>
-                    <Text style={[styles.closeModalText, isDarkMode && styles.darkCloseModalText]}>✕</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.modalTitle, isDarkMode && styles.darkModalTitle, { fontSize: 20, fontWeight: 'bold' }]}>
+                      Add Naam Logs
+                    </Text>
+                    <Text style={{ fontSize: 13, color: isDarkMode ? '#8E8E93' : '#666666', marginTop: 4 }}>
+                      Adds to existing count if it already exists.
+                    </Text>
+                  </View>
+                  <TouchableOpacity onPress={() => setIsLogMalaModalVisible(false)} style={{ padding: 4 }}>
+                    <Text style={[styles.closeModalText, isDarkMode && styles.darkCloseModalText, { fontSize: 20 }]}>✕</Text>
                   </TouchableOpacity>
                 </View>
 
-                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
-                  <View style={styles.quickMalaContainer}>
+                <View style={{ paddingHorizontal: 4, marginTop: 15 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                    {/* Date Selector Box */}
                     <TouchableOpacity
-                      style={[styles.quickMalaBtn, isDarkMode && styles.darkQuickMalaBtn]}
-                      onPress={() => {
-                        addManualCount(108);
-                        setIsLogMalaModalVisible(false);
+                      style={{
+                        flex: 1.1,
+                        marginRight: 10,
+                        borderWidth: 1,
+                        borderColor: isDarkMode ? '#444444' : '#FFE6D3',
+                        borderRadius: 12,
+                        paddingVertical: 14,
+                        paddingHorizontal: 12,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF',
                       }}
+                      onPress={() => setShowDatePicker(true)}
                     >
-                      <Text style={[styles.quickMalaBtnText, isDarkMode && styles.darkQuickMalaBtnText]}>+1 {getTranslation(language, 'malas')}</Text>
-                      <Text style={[styles.quickMalaBtnSub, isDarkMode && styles.darkQuickMalaBtnSub]}>108 {getTranslation(language, 'counts')}</Text>
+                      <Text style={{ fontSize: 16, color: isDarkMode ? '#FFFFFF' : '#333333', fontWeight: '500' }}>
+                        📅 {logDate.getDate()}/{logDate.getMonth() + 1}/{logDate.getFullYear()}
+                      </Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity
-                      style={[styles.quickMalaBtn, isDarkMode && styles.darkQuickMalaBtn]}
-                      onPress={() => {
-                        addManualCount(216);
-                        setIsLogMalaModalVisible(false);
-                      }}
-                    >
-                      <Text style={[styles.quickMalaBtnText, isDarkMode && styles.darkQuickMalaBtnText]}>+2 {getTranslation(language, 'malas')}</Text>
-                      <Text style={[styles.quickMalaBtnSub, isDarkMode && styles.darkQuickMalaBtnSub]}>216 {getTranslation(language, 'counts')}</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  <View style={styles.quickMalaContainer}>
-                    <TouchableOpacity
-                      style={[styles.quickMalaBtn, isDarkMode && styles.darkQuickMalaBtn]}
-                      onPress={() => {
-                        addManualCount(432);
-                        setIsLogMalaModalVisible(false);
-                      }}
-                    >
-                      <Text style={[styles.quickMalaBtnText, isDarkMode && styles.darkQuickMalaBtnText]}>+4 {getTranslation(language, 'malas')}</Text>
-                      <Text style={[styles.quickMalaBtnSub, isDarkMode && styles.darkQuickMalaBtnSub]}>432 {getTranslation(language, 'counts')}</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={[styles.quickMalaBtn, isDarkMode && styles.darkQuickMalaBtn]}
-                      onPress={() => {
-                        addManualCount(864);
-                        setIsLogMalaModalVisible(false);
-                      }}
-                    >
-                      <Text style={[styles.quickMalaBtnText, isDarkMode && styles.darkQuickMalaBtnText]}>+8 {getTranslation(language, 'malas')}</Text>
-                      <Text style={[styles.quickMalaBtnSub, isDarkMode && styles.darkQuickMalaBtnSub]}>864 {getTranslation(language, 'counts')}</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  <View style={styles.customCountContainer}>
-                    <Text style={[styles.customCountLabel, isDarkMode && styles.darkCustomCountLabel]}>{getTranslation(language, 'orEnterCustomCounts')}</Text>
+                    {/* Count Input Box */}
                     <TextInput
-                      style={[styles.customCountInput, isDarkMode && styles.darkCustomCountInput]}
+                      style={{
+                        flex: 1,
+                        borderWidth: 1,
+                        borderColor: isDarkMode ? '#444444' : '#FFE6D3',
+                        borderRadius: 12,
+                        paddingVertical: 14,
+                        paddingHorizontal: 16,
+                        fontSize: 16,
+                        color: isDarkMode ? '#FFFFFF' : '#333333',
+                        backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF',
+                      }}
                       value={customCountInput}
                       onChangeText={(text) => setCustomCountInput(text.replace(/[^0-9]/g, '').slice(0, 6))}
                       keyboardType="numeric"
-                      placeholder="e.g. 50 or 108"
+                      placeholder={language === 'hi' ? '# संख्या दर्ज करें' : language === 'mr' ? '# संख्या प्रविष्ट करा' : '# Enter Count'}
                       placeholderTextColor={isDarkMode ? "#666" : "#A0A0A0"}
                     />
                   </View>
 
-                  {/* Disable button if count is not valid (empty, 0, or not a valid number) */}
+                  {/* Add Log Button */}
                   <TouchableOpacity
                     style={[
                       styles.submitCountBtn, 
                       isDarkMode && styles.darkSubmitCountBtn,
-                      (!customCountInput || !/^\d{1,6}$/.test(customCountInput) || parseInt(customCountInput, 10) <= 0) && styles.submitCountBtnDisabled
+                      (!customCountInput || !/^\d{1,6}$/.test(customCountInput) || parseInt(customCountInput, 10) <= 0) && styles.submitCountBtnDisabled,
+                      { borderRadius: 12, paddingVertical: 14 }
                     ]}
                     disabled={!customCountInput || !/^\d{1,6}$/.test(customCountInput) || parseInt(customCountInput, 10) <= 0}
                     onPress={() => {
                       const count = parseInt(customCountInput, 10);
                       if (!isNaN(count) && count > 0) {
-                        addManualCount(count);
+                        const year = logDate.getFullYear();
+                        const month = String(logDate.getMonth() + 1).padStart(2, '0');
+                        const day = String(logDate.getDate()).padStart(2, '0');
+                        const formattedDateStr = `${year}-${month}-${day}`;
+                        
+                        addManualCount(count, formattedDateStr);
                         setCustomCountInput('');
                         setIsLogMalaModalVisible(false);
                       }
                     }}
                   >
-                    <Text style={[styles.submitCountBtnText, isDarkMode && styles.darkSubmitCountBtnText]}>{getTranslation(language, 'addCount')}</Text>
+                    <Text style={[styles.submitCountBtnText, isDarkMode && styles.darkSubmitCountBtnText, { fontSize: 16, fontWeight: 'bold' }]}>
+                      Add Log
+                    </Text>
                   </TouchableOpacity>
-                </ScrollView>
+                </View>
+
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={logDate}
+                    mode="date"
+                    display="default"
+                    maximumDate={new Date()}
+                    onChange={(event, selectedDate) => {
+                      setShowDatePicker(false);
+                      if (selectedDate) {
+                        setLogDate(selectedDate);
+                      }
+                    }}
+                  />
+                )}
               </View>
             </TouchableWithoutFeedback>
           </TouchableOpacity>

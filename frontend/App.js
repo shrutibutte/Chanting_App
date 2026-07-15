@@ -126,7 +126,8 @@ function MainApp() {
     language,
     isBlackoutMode,
     themeId,
-    celebrationType
+    celebrationType,
+    sessionCount
   } = useStore();
 
   const theme = getTheme(themeId);
@@ -251,7 +252,7 @@ function MainApp() {
     if (userToken) {
       const currentDate = getLocalDateString();
       // Check if they chanted at least once today and the popup wasn't shown today
-      if (todayCount >= 1 && lastStreakMaintainedPopupDate !== currentDate) {
+      if (sessionCount >= 1 && lastStreakMaintainedPopupDate !== currentDate) {
         const timer = setTimeout(() => {
           setShowToast(true);
           setLastStreakMaintainedPopupDate(currentDate);
@@ -259,7 +260,7 @@ function MainApp() {
         return () => clearTimeout(timer);
       }
     }
-  }, [userToken, todayCount >= 1, lastStreakMaintainedPopupDate]);
+  }, [userToken, sessionCount >= 1, lastStreakMaintainedPopupDate]);
 
   // Slide down / up Toast Animation
   useEffect(() => {
@@ -602,18 +603,9 @@ function MainApp() {
                   {celebrationDetails.title}
                 </Text>
                 
-                <Text style={[styles.celebrationMessage, { color: theme.secondaryText }]}>
+                <Text style={[styles.celebrationMessage, { color: theme.secondaryText, marginBottom: 28 }]}>
                   {celebrationDetails.msg}
                 </Text>
-
-                <View style={[styles.streakHighlightBox, { backgroundColor: theme.id === 'darkTemple' ? '#111111' : '#FFF2E6', borderColor: theme.id === 'darkTemple' ? '#222222' : '#FFE6D3' }]}>
-                  <Text style={[styles.streakHighlightTitle, { color: theme.secondaryText }]}>
-                    {getTranslation(language, 'currentStreakUpper')}
-                  </Text>
-                  <Text style={[styles.streakHighlightVal, { color: theme.accent }]}>
-                    {currentStreak} {getTranslation(language, 'days')}
-                  </Text>
-                </View>
 
                 <TouchableOpacity 
                   style={[styles.continueButton, { backgroundColor: theme.accent, shadowColor: theme.accent }]} 
