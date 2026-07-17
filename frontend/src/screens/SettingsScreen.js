@@ -24,7 +24,8 @@ export default function SettingsScreen() {
     setLanguage,
     themeId,
     setThemeId,
-    email
+    email,
+    unsyncedTaps
   } = useStore();
 
   const theme = getTheme(themeId);
@@ -86,23 +87,38 @@ export default function SettingsScreen() {
       }
     };
 
-    Alert.alert(
-      getTranslation(language, 'logout'),
-      (language === 'hi' 
-        ? 'क्या आप वाकई लॉगआउट करना चाहते हैं?' 
-        : language === 'mr' 
-        ? 'तुम्हाला नक्की लॉगआउट करायचे आहे का?' 
-        : 'Are you sure you want to log out?') + 
-      (email ? `\n(${email})` : ''),
-      [
-        { text: getTranslation(language, 'cancel'), style: 'cancel' },
-        { 
-          text: getTranslation(language, 'logout'), 
-          style: 'destructive',
-          onPress: performSyncAndLogout
-        }
-      ]
-    );
+    if (unsyncedTaps > 0) {
+      Alert.alert(
+        getTranslation(language, 'syncAndLogout'),
+        getTranslation(language, 'syncPendingMessage', { count: unsyncedTaps }),
+        [
+          { text: getTranslation(language, 'cancel'), style: 'cancel' },
+          { 
+            text: getTranslation(language, 'syncAndLogout'), 
+            style: 'destructive',
+            onPress: performSyncAndLogout
+          }
+        ]
+      );
+    } else {
+      Alert.alert(
+        getTranslation(language, 'logout'),
+        (language === 'hi' 
+          ? 'क्या आप वाकई लॉगआउट करना चाहते हैं?' 
+          : language === 'mr' 
+          ? 'तुम्हाला नक्की लॉगआउट करायचे आहे का?' 
+          : 'Are you sure you want to log out?') + 
+        (email ? `\n(${email})` : ''),
+        [
+          { text: getTranslation(language, 'cancel'), style: 'cancel' },
+          { 
+            text: getTranslation(language, 'logout'), 
+            style: 'destructive',
+            onPress: performSyncAndLogout
+          }
+        ]
+      );
+    }
   };
 
   const handleResetCount = () => {
@@ -417,7 +433,9 @@ export default function SettingsScreen() {
         >
           <Ionicons name="log-out-outline" size={20} color={theme.accent} style={{ marginRight: 8 }} />
           <Text style={[styles.logoutText, { color: theme.accent }]}>
-            {getTranslation(language, 'logout')}
+            {unsyncedTaps > 0 
+              ? getTranslation(language, 'syncAndLogout') 
+              : getTranslation(language, 'logout')}
           </Text>
         </TouchableOpacity>
       </ScrollView>
