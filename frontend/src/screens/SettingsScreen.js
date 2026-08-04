@@ -6,6 +6,7 @@ import { Ionicons, Feather, MaterialIcons } from '@expo/vector-icons';
 import { requestNotificationPermissions, scheduleDailyReminder, cancelAllReminders } from '../utils/notifications';
 import { getTranslation } from '../utils/translations';
 import { getTheme } from '../utils/themes';
+import { syncOfflineCounter } from '../api/client';
 
 export default function SettingsScreen() {
   const { 
@@ -22,7 +23,9 @@ export default function SettingsScreen() {
     language,
     setLanguage,
     themeId,
-    setThemeId
+    setThemeId,
+    email,
+    unsyncedTaps
   } = useStore();
 
   const theme = getTheme(themeId);
@@ -52,33 +55,66 @@ export default function SettingsScreen() {
       await logout();
     };
 
+    const performSyncAndLogout = async () => {
+      if (unsyncedTaps > 0) {
+        try {
+          await syncOfflineCounter();
+        } catch (e) {
+          console.log("Failed to sync during logout", e.message);
+        }
+      }
+      
+      const updatedState = useStore.getState();
+      if (updatedState.unsyncedTaps > 0) {
+        Alert.alert(
+          language === 'hi' ? 'असिंक्रनाइज़्ड गिनती' : language === 'mr' ? 'असिंक्रोनाइझ्ड संख्या' : 'Unsynced Counts',
+          language === 'hi'
+            ? `सिंक विफल रहा। ${email ? `(${email}) ` : ''}लॉगआउट करने पर ये गिनती स्थायी रूप से मिट जाएंगी। क्या आप अभी भी लॉगआउट करना चाहते हैं?`
+            : language === 'mr'
+            ? `सिंक अपयशी ठरला. ${email ? `(${email}) ` : ''}लॉगआउट केल्यास या संख्या कायमच्या नष्ट होतील. तुम्हाला अजूनही लॉगआउट करायचे आहे का?`
+            : `Sync failed. Logging out now will permanently delete unsynced counts for ${email ? email : 'this account'} from this device. Do you still want to log out?`,
+          [
+            { text: getTranslation(language, 'cancel'), style: 'cancel' },
+            { 
+              text: language === 'hi' ? 'हाँ, लॉगआउट करें' : language === 'mr' ? 'होय, लॉगआउट करा' : 'Yes, Log Out', 
+              style: 'destructive', 
+              onPress: performLogout 
+            }
+          ]
+        );
+      } else {
+        await performLogout();
+      }
+    };
+
     if (unsyncedTaps > 0) {
       Alert.alert(
-        language === 'hi' ? 'असिंक्रनाइज़्ड गिनती' : language === 'mr' ? 'असिंक्रोनाइझ्ड संख्या' : 'Unsynced Counts',
-        language === 'hi'
-          ? 'आपके पास कुछ ऐसी गिनती है जो अभी तक डेटाबेस में सहेजी नहीं गई है। लॉगआउट करने पर ये मिट जाएंगी। क्या आप अभी भी लॉगआउट करना चाहते हैं?'
-          : language === 'mr'
-          ? 'तुमच्याकडे काही संख्या आहेत ज्या अजून डेटाबेसमध्ये जतन केल्या नाहीत. लॉगआउट केल्यास त्या नष्ट होतील. तुम्हाला अजूनही लॉगआउट करायचे आहे का?'
-          : 'You have unsynced counts. Logging out now will permanently delete them from this device. Do you still want to log out?',
+        getTranslation(language, 'syncAndLogout'),
+        getTranslation(language, 'syncPendingMessage', { count: unsyncedTaps }),
         [
           { text: getTranslation(language, 'cancel'), style: 'cancel' },
           { 
-            text: language === 'hi' ? 'हाँ, लॉगआउट करें' : language === 'mr' ? 'होय, लॉगआउट करा' : 'Yes, Log Out', 
-            style: 'destructive', 
-            onPress: performLogout 
+            text: getTranslation(language, 'syncAndLogout'), 
+            style: 'destructive',
+            onPress: performSyncAndLogout
           }
         ]
       );
     } else {
       Alert.alert(
         getTranslation(language, 'logout'),
-        language === 'hi' ? 'क्या आप वाकई लॉगआउट करना चाहते हैं?' : language === 'mr' ? 'तुम्हाला नक्की लॉगआउट करायचे आहे का?' : 'Are you sure you want to log out?',
+        (language === 'hi' 
+          ? 'क्या आप वाकई लॉगआउट करना चाहते हैं?' 
+          : language === 'mr' 
+          ? 'तुम्हाला नक्की लॉगआउट करायचे आहे का?' 
+          : 'Are you sure you want to log out?') + 
+        (email ? `\n(${email})` : ''),
         [
           { text: getTranslation(language, 'cancel'), style: 'cancel' },
           { 
             text: getTranslation(language, 'logout'), 
             style: 'destructive',
-            onPress: performLogout
+            onPress: performSyncAndLogout
           }
         ]
       );
@@ -207,6 +243,32 @@ export default function SettingsScreen() {
     } else {
       Alert.alert(getTranslation(language, 'invalidTime'), getTranslation(language, 'enterValidTime'));
     }
+  };
+
+  const getFormattedPreview = (timeStr) => {
+    const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+    if (!timeRegex.test(timeStr)) {
+      const parts = timeStr.split(':');
+      const hoursInt = parseInt(parts[0], 10);
+      if (!isNaN(hoursInt) && hoursInt >= 0 && hoursInt <= 23) {
+        const ampm = hoursInt >= 12 ? 'PM' : 'AM';
+        const displayHours = hoursInt % 12 === 0 ? 12 : hoursInt % 12;
+        if (parts[1] && parts[1].length > 0) {
+          const minsInt = parseInt(parts[1], 10);
+          if (!isNaN(minsInt) && minsInt >= 0 && minsInt <= 59) {
+            const displayMins = parts[1].padStart(2, '0');
+            return `${displayHours}:${displayMins} ${ampm}`;
+          }
+        }
+        return `${displayHours}:00 ${ampm}`;
+      }
+      return null;
+    }
+    const [hours, minutes] = timeStr.split(':');
+    const hoursInt = parseInt(hours, 10);
+    const ampm = hoursInt >= 12 ? 'PM' : 'AM';
+    const displayHours = hoursInt % 12 === 0 ? 12 : hoursInt % 12;
+    return `${displayHours}:${minutes} ${ampm}`;
   };
 
   const getGoalTitle = (key) => {
@@ -371,7 +433,9 @@ export default function SettingsScreen() {
         >
           <Ionicons name="log-out-outline" size={20} color={theme.accent} style={{ marginRight: 8 }} />
           <Text style={[styles.logoutText, { color: theme.accent }]}>
-            {getTranslation(language, 'logout')}
+            {unsyncedTaps > 0 
+              ? getTranslation(language, 'syncAndLogout') 
+              : getTranslation(language, 'logout')}
           </Text>
         </TouchableOpacity>
       </ScrollView>
@@ -437,7 +501,7 @@ export default function SettingsScreen() {
                 {getTranslation(language, 'enterTimeFormat')}
               </Text>
               <TextInput
-                style={[styles.modalInput, { backgroundColor: theme.background, borderColor: theme.border, color: theme.primaryText }]}
+                style={[styles.modalInput, { backgroundColor: theme.background, borderColor: theme.border, color: theme.primaryText, marginBottom: 12 }]}
                 value={tempTime}
                 onChangeText={setTempTime}
                 keyboardType="numbers-and-punctuation"
@@ -445,6 +509,11 @@ export default function SettingsScreen() {
                 placeholderTextColor={theme.secondaryText}
                 maxLength={5}
               />
+              {getFormattedPreview(tempTime) && (
+                <Text style={{ color: theme.accent, fontSize: 14, fontWeight: 'bold', marginBottom: 16, textAlign: 'center' }}>
+                  {language === 'hi' ? 'यानी: ' : language === 'mr' ? 'म्हणजे: ' : 'Equivalent to: '}{getFormattedPreview(tempTime)}
+                </Text>
+              )}
               <View style={styles.modalButtons}>
                 <TouchableOpacity style={[styles.modalBtnCancel, { backgroundColor: theme.id === 'darkTemple' ? '#333333' : '#F0F0F0' }]} onPress={() => setIsTimeModalVisible(false)}>
                   <Text style={[styles.modalBtnCancelText, { color: theme.primaryText }]}>

@@ -54,9 +54,6 @@ const authenticateToken = (req, res, next) => {
 };
 
 // --- Email OTP Service ---
-const otps = new Map(); // Global memory (or Redis) for storing temporary OTPs
-
-
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -71,11 +68,18 @@ app.post('/auth/send-otp', async (req, res) => {
 
   // Generate 6-digit OTP
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  otps.set(email, { otp, expiresAt: Date.now() + 10 * 60 * 1000, attempts: 0 });
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
   
   console.log(`[AUTH] Generating OTP for ${email}`);
   
   try {
+    // Save OTP to DB (Vercel serverless compatible)
+    await prisma.otp.upsert({
+      where: { email },
+      update: { code: otp, expiresAt, attempts: 0 },
+      create: { email, code: otp, expiresAt, attempts: 0 }
+    });
+
     await transporter.sendMail({
       from: `"Naam Jaap App" <${process.env.EMAIL_USER}>`,
       to: email,
@@ -95,36 +99,40 @@ app.post('/auth/verify-otp', async (req, res) => {
   const { email, otp } = req.body;
   if (!email || !otp) return res.status(400).json({ error: 'Email and OTP required' });
 
-  const storedOtpData = otps.get(email);
-  if (!storedOtpData) {
-    return res.status(400).json({ error: 'No active OTP request found' });
-  }
-
-  if (Date.now() > storedOtpData.expiresAt) {
-    otps.delete(email);
-    return res.status(400).json({ error: 'OTP has expired. Please request a new one.' });
-  }
-
-  if (storedOtpData.otp !== otp) {
-    storedOtpData.attempts += 1;
-    if (storedOtpData.attempts >= 5) {
-      otps.delete(email);
-      return res.status(400).json({ error: 'Too many incorrect attempts. OTP invalidated.' });
-    }
-    return res.status(400).json({ error: `Invalid OTP. Attempts remaining: ${5 - storedOtpData.attempts}` });
-  }
-
-  // Cleanup OTP
-  otps.delete(email);
-
   try {
+    const storedOtpData = await prisma.otp.findUnique({ where: { email } });
+    if (!storedOtpData) {
+      return res.status(400).json({ error: 'No active OTP request found' });
+    }
+
+    if (new Date() > new Date(storedOtpData.expiresAt)) {
+      await prisma.otp.delete({ where: { email } }).catch(() => {});
+      return res.status(400).json({ error: 'OTP has expired. Please request a new one.' });
+    }
+
+    if (storedOtpData.code !== otp) {
+      const attempts = storedOtpData.attempts + 1;
+      if (attempts >= 5) {
+        await prisma.otp.delete({ where: { email } }).catch(() => {});
+        return res.status(400).json({ error: 'Too many incorrect attempts. OTP invalidated.' });
+      }
+      await prisma.otp.update({
+        where: { email },
+        data: { attempts }
+      });
+      return res.status(400).json({ error: `Invalid OTP. Attempts remaining: ${5 - attempts}` });
+    }
+
+    // Cleanup OTP
+    await prisma.otp.delete({ where: { email } }).catch(() => {});
+
     // Get or Create User
     let user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
       user = await prisma.user.create({ data: { email } });
     }
 
-    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '365d' });
     res.json({ token, user });
   } catch (error) {
     console.error('[Verify OTP Error]:', error.message);
